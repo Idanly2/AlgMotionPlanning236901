@@ -86,7 +86,7 @@ class AStarPlanner(object):
         return vid
 
     def heuristic(self, config):
-        return numpy.sqrt((config[0] - self.goal_config[0]) ** 2 + (config[1] - self.goal_config[1]) ** 2)
+        return self.planning_env.compute_heuristic(config)
 
     def _calc_node_priority(self, node):
         return node.g_value + self.eps * self.heuristic(node.config)
@@ -96,12 +96,8 @@ class AStarPlanner(object):
         expands = []
         for d in directions:
             new_config = tuple(map(operator.add, config, d))
-            if new_config[0] < self.planning_env.xlimit[0] or new_config[0] > self.planning_env.xlimit[1]:
-                continue
-            elif new_config[1] < self.planning_env.ylimit[0] or new_config[1] > self.planning_env.ylimit[1]:
-                continue
-            elif self.planning_env.map[new_config] == 0:
-                cost = numpy.sqrt(( new_config[0] - config[0] ) ** 2 + ( new_config[1] - config[1] ) ** 2)
+            if self.planning_env.state_validity_checker(new_config):
+                cost = self.planning_env
                 expands.append((new_config, cost))
         return expands
 

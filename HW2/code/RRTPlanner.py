@@ -16,8 +16,22 @@ class RRTPlanner(object):
         self.tree.AddVertex(start_config)
 
         # TODO (student): Implement your planner here.
+
+        while True:
+            # TOOD: think of a stopping condition
+            x_random = self.planning_env.sample_biased()
+            x_nearest_id, x_nearest = self.planning_env.GetNearestVertex(x_random)
+            x_new = self.extend(x_random, x_nearest, step_size)
+            if self.planning_env.edge_validity_checker(x_nearest, x_new):
+                x_new_id = self.tree.AddVertex(x_new)
+                self.tree.AddEdge(x_nearest_id, x_new_id)
+            if x_new == goal_config:
+                # TODO: fix end_condition
+                return True
+
         plan.append(start_config)
         plan.append(goal_config)
+
         return numpy.array(plan)
 
     def extend(self, x_rand, x_near, eta):

@@ -2,8 +2,10 @@ import numpy
 from IPython import embed
 from matplotlib import pyplot as plt
 
+from bresenham import bresenhamline
+
+
 class MapEnvironment(object):
-    
     def __init__(self, mapfile, start, goal):
 
         # Obtain the boundary limits.
@@ -17,9 +19,8 @@ class MapEnvironment(object):
             raise ValueError('Start and Goal state must be within the map limits');
             exit(0)
 
-        ## Added by Idan
-        self.start = start
-        self.goal = goal
+        self.start_config = start
+        self.goal_config = goal
 
         # Display the map
         plt.imshow(self.map, interpolation='nearest')
@@ -32,25 +33,25 @@ class MapEnvironment(object):
         """
         p = numpy.random.random()
         if p < bias:
-            return self.goal
+            return self.goal_config
         else:
             return numpy.array([numpy.random.randint(self.xlimit), numpy.random.randint(self.ylimit)])
 
     def compute_distance(self, start_config, end_config):
-        
         #
         # TODO: Implement a function which computes the distance between
         # two configurations.
         #
-        pass
-
+        return numpy.sqrt((start_config[0] - end_config[0]) ** 2 + (start_config[1] - end_config[1]) ** 2)
 
     def state_validity_checker(self, config):
-
         #
         # TODO: Implement a state validity checker
         # Return true if valid.
         #
+        if config[0] < self.ylimit[0] or config[0] > self.ylimit[1] or config[1] < self.xlimit[0] or config[1] > \
+                self.xlimit[1] or self.map[config] == 1:
+            return False
         return True
 
     def edge_validity_checker(self, config1, config2):
@@ -59,14 +60,16 @@ class MapEnvironment(object):
         # TODO: Implement an edge validity checker
         #
         #
-        pass
+        start = numpy.array(config1[1], config1[0])
+        end = numpy.array(config2[1], config2[0])
+        line = bresenhamline(start, end)
+        return numpy.all(self.map[line] == 0)
 
     def compute_heuristic(self, config):
-        
         #
         # TODO: Implement a function to compute heuristic.
         #
-        pass
+        return numpy.sqrt((config[0] - self.goal_config[0]) ** 2 + (config[1] - self.goal_config[1]) ** 2)
 
     def visualize_plan(self, plan):
         '''
@@ -76,7 +79,7 @@ class MapEnvironment(object):
         '''
         plt.imshow(self.map, interpolation='nearest')
         for i in range(numpy.shape(plan)[0] - 1):
-            x = [plan[i,0], plan[i+1, 0]]
-            y = [plan[i,1], plan[i+1, 1]]
+            x = [plan[i, 0], plan[i + 1, 0]]
+            y = [plan[i, 1], plan[i + 1, 1]]
             plt.plot(x, y, 'k')
         plt.show()
