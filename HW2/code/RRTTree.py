@@ -22,7 +22,7 @@ class RRTTree(object):
         '''
         dists = []
         for v in self.vertices:
-            dists.append(self.planning_env.compute_distance(config, v.config))
+            dists.append(self.planning_env.compute_distance(config, v))
 
         vid, vdist = min(enumerate(dists), key=operator.itemgetter(1))
 
@@ -36,7 +36,7 @@ class RRTTree(object):
         '''
         dists = []
         for v in self.vertices:
-            dists.append(self.planning_env.compute_distance(config, v.config))
+            dists.append(self.planning_env.compute_distance(config, v))
 
         dists = numpy.array(dists)
         knnIDs = numpy.argpartition(dists, k)[:k]
@@ -60,3 +60,10 @@ class RRTTree(object):
         @param eid end state ID
         '''
         self.edges[eid] = sid
+
+    def VisualizeTree(self):
+        fake_plan = []
+        for key in self.edges:
+            fake_plan.append(self.vertices[self.edges[key]] + self.vertices[key])
+        fake_plan = numpy.array(fake_plan)
+        self.planning_env.visualize_lines(fake_plan)

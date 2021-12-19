@@ -35,7 +35,8 @@ class MapEnvironment(object):
         if p < bias:
             return self.goal_config
         else:
-            return numpy.array([numpy.random.randint(self.xlimit), numpy.random.randint(self.ylimit)])
+            return [numpy.random.randint(self.xlimit[0], self.xlimit[1]),
+                    numpy.random.randint(self.ylimit[0], self.ylimit[1])]
 
     def compute_distance(self, start_config, end_config):
         #
@@ -60,10 +61,10 @@ class MapEnvironment(object):
         # TODO: Implement an edge validity checker
         #
         #
-        start = numpy.array(config1[1], config1[0])
-        end = numpy.array(config2[1], config2[0])
+        start = numpy.array([[config1[1], config1[0]]])
+        end = numpy.array([[config2[1], config2[0]]])
         line = bresenhamline(start, end)
-        return numpy.all(self.map[line] == 0)
+        return numpy.all(self.map[line[:, 0], line[:, 1]] == 0)
 
     def compute_heuristic(self, config):
         #
@@ -81,5 +82,17 @@ class MapEnvironment(object):
         for i in range(numpy.shape(plan)[0] - 1):
             x = [plan[i, 0], plan[i + 1, 0]]
             y = [plan[i, 1], plan[i + 1, 1]]
+            plt.plot(x, y, 'k')
+        plt.show()
+
+    def visualize_lines(self, lines):
+        '''
+        Visualize an iterable of lines
+        input lines should be in [x1, y1, x2, y2] convention.
+        '''
+        plt.imshow(self.map, interpolation='nearest')
+        for i in range(len(lines)):
+            x = [lines[i, 0], lines[i, 2]]
+            y = [lines[i, 1], lines[i, 3]]
             plt.plot(x, y, 'k')
         plt.show()

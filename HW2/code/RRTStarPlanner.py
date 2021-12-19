@@ -8,7 +8,7 @@ class RRTStarPlanner(object):
         self.planning_env = planning_env
         self.tree = RRTTree(self.planning_env)
 
-    def Plan(self, start_config, goal_config, step_size=0.001):
+    def Plan(self, start_config, goal_config, step_size=5):
         # Initialize an empty plan.
         plan = []
 
