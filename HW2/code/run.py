@@ -8,18 +8,32 @@ from RRTStarPlanner import RRTStarPlanner
 from AStarPlanner import AStarPlanner
 
 from IPython import embed
+import matplotlib.pyplot as plt
+# p2 = {1: (251.45079348883246, 17805), 10: (256.7228714274748, 2103), 20: (256.72287142747473,2894)}
+# p1 = {1: (13.242640687119286, 40), 10: (13.242640687119286, 44), 20: (13.242640687119286,46)}
+# dates_2 = [1, 10, 20]
+# values_2 = [251.45079348883246, 256.7228714274748, 256.72287142747473]
+# values_22 = [17805, 2103, 2894]
+# values_1 = [13.242640687119286, 13.242640687119286, 13.242640687119286]
+# values_12 = [40, 44, 46]
+# plt.plot(dates_2, values_1, '-o')
+# plt.xlabel("Epsilon")
+# plt.ylabel("Cost")
+# # plt.title("AStarPlanner - map2 - start:(321, 148) goal:(106, 202)")
+# plt.title("AStarPlanner - map1 - start:(0, 8) goal:(5, 4)")
+# plt.grid()
+# plt.show()
 
 def main(planning_env, planner, start, goal):
 
     # Notify.
-    input('Press any key to begin planning')
+    # input('Press any key to begin planning')
 
     # Plan.
     plan = planner.Plan(start, goal)
-
     # TODO (student): Do not shortcut when comparing the performance of algorithms.
     # Comment this line out when collecting data over performance metrics.
-
+    plan[:, [0, 1]] = plan[:, [1, 0]]
     # Visualize the final path.
     planning_env.visualize_plan(plan)
     embed()

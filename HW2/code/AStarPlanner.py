@@ -2,6 +2,7 @@ import numpy
 from heapdict import heapdict
 import operator
 
+
 class Node:
     def __init__(self, config, parent: "Node", g_value=None):
         self.config = config
@@ -19,7 +20,7 @@ class NodesCollection:
         self._collection[node.config] = node
 
     def remove_node(self, node):
-        assert node.state in self._collection
+        assert node.config in self._collection
         del self._collection[node.config]
 
     def __contains__(self, state):
@@ -66,7 +67,7 @@ class NodesPriorityQueue:
 
 
 class AStarPlanner(object):
-    def __init__(self, planning_env, eps=1):
+    def __init__(self, planning_env, eps=10):
         self.eps = eps
         self.planning_env = planning_env
         self.vertices = []
@@ -96,12 +97,12 @@ class AStarPlanner(object):
         expands = []
         for d in directions:
             new_config = tuple(map(operator.add, config, d))
-            if new_config[0] < self.planning_env.xlimit[0] or new_config[0] > self.planning_env.xlimit[1]:
+            if new_config[0] < self.planning_env.xlimit[0] or new_config[0] >= self.planning_env.xlimit[1]:
                 continue
-            elif new_config[1] < self.planning_env.ylimit[0] or new_config[1] > self.planning_env.ylimit[1]:
+            elif new_config[1] < self.planning_env.ylimit[0] or new_config[1] >= self.planning_env.ylimit[1]:
                 continue
             elif self.planning_env.map[new_config] == 0:
-                cost = numpy.sqrt(( new_config[0] - config[0] ) ** 2 + ( new_config[1] - config[1] ) ** 2)
+                cost = numpy.sqrt((new_config[0] - config[0]) ** 2 + (new_config[1] - config[1]) ** 2)
                 expands.append((new_config, cost))
         return expands
 
@@ -143,11 +144,12 @@ class AStarPlanner(object):
                     plan.insert(0, c_node.config)
                     c_node = c_node.parent
                 plan.insert(0, c_node.config)
+                print("Epsilon: {} ,Cost: {} ,Number of expanded nodes: {}".format(self.eps, cost, n_node_expanded))
                 break
                 # return cost, n_node_expanded
             n_node_expanded += 1
             for config, cost in self.expand_state(next_node.config):
-                self.show_map(config)
+                # self.show_map(config)
                 successor_node = Node(config=config, parent=next_node, g_value=next_node.g_value + cost)
                 successor_node_priority = self._calc_node_priority(successor_node)
                 if config not in self.open and config not in self.close:
@@ -162,10 +164,7 @@ class AStarPlanner(object):
                     if successor_node.g_value < node_in_close.g_value:
                         self.close.remove_node(node_in_close)
                         self.open.add(successor_node, successor_node_priority)
-                # plan.append(config)
 
-        # plan.append(start_config)
-        # plan.append(goal_config)
         return numpy.array(plan)
 
 # class BestFirstSearchRobot:
