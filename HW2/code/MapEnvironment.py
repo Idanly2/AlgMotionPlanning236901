@@ -49,8 +49,8 @@ class MapEnvironment(object):
         # TODO: Implement a state validity checker
         # Return true if valid.
         #
-        if config[0] < self.ylimit[0] or config[0] > self.ylimit[1] or config[1] < self.xlimit[0] or config[1] > \
-                self.xlimit[1] or self.map[config] == 1:
+        if config[0] < self.xlimit[0] or config[0] > self.xlimit[1] or config[1] < self.ylimit[0] or config[1] > \
+                self.ylimit[1] or self.map[config[1], config[0]] == 1:
             return False
         return True
 

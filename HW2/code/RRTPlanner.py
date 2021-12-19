@@ -24,7 +24,7 @@ class RRTPlanner(object):
             x_new = self.extend(x_random, x_nearest, step_size)
             if self.planning_env.edge_validity_checker(x_nearest, x_new):
                 x_new_id = self.tree.AddVertex(x_new)
-                self.tree.AddEdge(x_nearest_id, x_new_id)
+                self.tree.AddEdge(x_new_id, x_nearest_id)  # Edges indicate the parent of each node
             if x_new == goal_config:
                 # TODO: fix end_condition
                 return True
@@ -35,6 +35,5 @@ class RRTPlanner(object):
         return numpy.array(plan)
 
     def extend(self, x_rand, x_near, eta):
-        # TODO (student): Implement an extend logic.
         pass
 
