@@ -1,0 +1,1 @@
+rrtstar_step_50.0_k_log Cost: 287.1465895330768 , Time(secs): 2.3159606218338014

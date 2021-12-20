@@ -8,6 +8,7 @@ class RRTTree(object):
         self.planning_env = planning_env
         self.vertices = []
         self.edges = dict()
+        self.vertices_costs = dict()
 
     def GetRootID(self):
         '''
@@ -61,9 +62,25 @@ class RRTTree(object):
         '''
         self.edges[eid] = sid
 
+    def SetVertexCost(self, vid, cost):
+        '''
+        Sets a cost to a vertex
+        :param vid: Vertex id
+        :param cost: Vost of the vertex
+        '''
+        self.vertices_costs[vid] = cost
+
+    def GetVertexCost(self, vid):
+        '''
+        Return the vost associated with a vertex
+        :param vid: Vertex id
+        :return: Last cost set to the vertex
+        '''
+        return self.vertices_costs[vid]
+
     def VisualizeTree(self):
         fake_plan = []
         for key in self.edges:
             fake_plan.append(self.vertices[self.edges[key]] + self.vertices[key])
         fake_plan = numpy.array(fake_plan)
-        self.planning_env.visualize_lines(fake_plan)
+        self.planning_env.visualize_tree(fake_plan)

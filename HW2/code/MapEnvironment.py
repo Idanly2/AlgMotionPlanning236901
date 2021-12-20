@@ -6,7 +6,9 @@ from bresenham import bresenhamline
 
 
 class MapEnvironment(object):
-    def __init__(self, mapfile, start, goal):
+    output_counter = 0
+
+    def __init__(self, mapfile, start, goal, goal_bias_sample=0.05, output_plot_desc=None):
 
         # Obtain the boundary limits.
         # Check if file exists.
@@ -16,23 +18,22 @@ class MapEnvironment(object):
 
         # Check if start and goal are within limits and collision free
         if not self.state_validity_checker(start) or not self.state_validity_checker(goal):
-            raise ValueError('Start and Goal state must be within the map limits');
+            raise ValueError('Start and Goal state must be within the map limits')
             exit(0)
 
         self.start_config = start
         self.goal_config = goal
+        self.output_plot_desc = output_plot_desc
+        self.goal_bias_sample = goal_bias_sample
 
-        # Display the map
-        plt.imshow(self.map, interpolation='nearest')
-
-    def sample_biased(self, bias=0.05):
+    def sample_biased(self):
         """
         Sample a random state, with a certain bias to choose the goal state.
         :param bias: Bias parameter to draw the goal state instead of a random state.
         :return: Random state of the map.
         """
         p = numpy.random.random()
-        if p < bias:
+        if p < self.goal_bias_sample:
             return self.goal_config
         else:
             return [numpy.random.randint(self.xlimit[0], self.xlimit[1]),
@@ -83,9 +84,18 @@ class MapEnvironment(object):
             x = [plan[i, 0], plan[i + 1, 0]]
             y = [plan[i, 1], plan[i + 1, 1]]
             plt.plot(x, y, 'k')
-        plt.show()
 
-    def visualize_lines(self, lines):
+        graph_title = self.output_plot_desc + '_plan'
+        plt.title(graph_title)
+
+        if self.output_plot_desc:
+            plt.savefig(graph_title + '_' + str(MapEnvironment.output_counter) + '.png', bbox_inches='tight')
+            plt.close()
+            MapEnvironment.output_counter += 1
+        else:
+            plt.show()
+
+    def visualize_tree(self, lines):
         '''
         Visualize an iterable of lines
         input lines should be in [x1, y1, x2, y2] convention.
@@ -95,4 +105,13 @@ class MapEnvironment(object):
             x = [lines[i, 0], lines[i, 2]]
             y = [lines[i, 1], lines[i, 3]]
             plt.plot(x, y, 'k')
-        plt.show()
+
+        graph_title = self.output_plot_desc + '_tree'
+        plt.title(graph_title)
+
+        if self.output_plot_desc:
+            plt.savefig(graph_title + '_' + str(MapEnvironment.output_counter) + '.png', bbox_inches='tight')
+            plt.close()
+            MapEnvironment.output_counter += 1
+        else:
+            plt.show()

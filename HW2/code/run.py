@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse, numpy, time
+from statistics import mean
 
 from MapEnvironment import MapEnvironment
 from RRTPlanner import RRTPlanner
@@ -37,12 +38,14 @@ def main(planning_env, planner, start, goal):
     alg_compare.stopwatch_start()
     plan = planner.Plan(start, goal)
     alg_compare.stopwatch_end()
-    # TODO (student): Do not shortcut when comparing the performance of algorithms.
-    print("Cost: {} , Time(secs): {}".format(alg_compare.plan_cost(plan), alg_compare.plan_time()))
+    alg_compare.register_plan_cost(plan)
 
-    if isinstance(planner, RRTPlanner):
+    # TODO (student): Do not shortcut when comparing the performance of algorithms.
+    print("Cost: {} , Time(secs): {}".format(mean(alg_compare.costs), mean(alg_compare.times)))
+
+    if isinstance(planner, RRTPlanner) or isinstance(planner, RRTStarPlanner):
         planner.VisualizeTree()
-        
+
     # Visualize the final path.
     planning_env.visualize_plan(plan)
 
@@ -63,7 +66,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # First setup the environment and the robot.
-    planning_env = MapEnvironment(args.map, args.start, args.goal)
+    planning_env = MapEnvironment(args.map, args.start, args.goal, args.planner)
 
     # Next setup the planner
     if args.planner == 'astar':
