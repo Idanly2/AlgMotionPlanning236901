@@ -412,7 +412,7 @@ class MapEnvironment(object):
         @param plan Sequence of configs defining the plan.
         '''
         # switch backend
-        matplotlib.use('TkAgg')
+        # matplotlib.use('TkAgg')
 
         # interpolate plan and get inspected points
         plan = self.interpolate_plan(plan_configs=plan)

@@ -7,7 +7,7 @@ from Robot import Robot
 
 class RRTMotionPlanner(object):
 
-    def __init__(self, planning_env, ext_mode, goal_prob, step_size=50):
+    def __init__(self, planning_env, ext_mode, goal_prob):
 
         # set environment and search tree
         self.planning_env = planning_env
@@ -15,9 +15,14 @@ class RRTMotionPlanner(object):
 
         # set search params
         self.ext_mode = ext_mode
-        self.goal_prob = goal_prob
 
-        self.step_size = step_size
+        if self.ext_mode == "E1":
+            self.distance_threshold = 10000
+        else:
+            self.distance_threshold = 80
+
+        self.step_size = 0.1
+        self.goal_prob = goal_prob
 
     def sample_biased(self):
         """
@@ -47,7 +52,7 @@ class RRTMotionPlanner(object):
                                    [theta_1, theta_2, theta_3]))))
                 if np.cos(theta_1) + np.cos(theta_1 + theta_2) + np.cos(theta_1 + theta_2 + theta_3) >= 0 and np.sin(
                         theta_1) + np.sin(
-                        theta_1 + theta_2) + np.sin(theta_1 + theta_2 + theta_3) >= 0 and is_validate_robot:
+                    theta_1 + theta_2) + np.sin(theta_1 + theta_2 + theta_3) >= 0 and is_validate_robot:
                     break
             while True:
                 theta_4 = np.random.uniform(-np.pi, np.pi)
@@ -68,7 +73,7 @@ class RRTMotionPlanner(object):
             self.tree.add_edge(parent_id, x_add_id)  # Edges indicate the parent of each node
         return x_add_id
 
-    def build_tree(self, goal_config, step_size):
+    def build_tree(self, goal_config):
         while True:
             x_random = self.sample_biased()
             x_nearest_id, x_nearest = self.tree.get_nearest_config(x_random)
@@ -103,15 +108,16 @@ class RRTMotionPlanner(object):
 
         # TODO: Task 2.3
         goal_config = self.planning_env.goal
-        goal_vertex_id = self.build_tree(goal_config=goal_config, step_size=self.step_size)
+        goal_vertex_id = self.build_tree(goal_config=goal_config)
         plan_list_of_trees = self.plan_to_vertex(goal_vertex_id)
+        end_time = time.time()
         plan = plan_list_of_trees[0].config
-        for i in range(1,len(plan_list_of_trees)):
+        for i in range(1, len(plan_list_of_trees)):
             plan = np.vstack((plan, plan_list_of_trees[i].config))
 
         # print total path cost and time
         print('Total cost of path: {:.2f}'.format(self.compute_cost(plan)))
-        print('Total time: {:.2f}'.format(time.time() - start_time))
+        print('Total planning time: {:.2f}'.format(end_time - start_time))
 
         return np.array(plan)
 
@@ -133,18 +139,13 @@ class RRTMotionPlanner(object):
         @param rand_config The sampled configuration.
         '''
         # TODO: Task 2.3
-        eta = 1000
-        if self.ext_mode == 'E1':
-            eta = 1000
-
-        if self.planning_env.robot.compute_distance(rand_config, near_config) < eta:
+        if self.planning_env.robot.compute_distance(rand_config, near_config) < self.distance_threshold:
             return rand_config
         else:
-            dir = np.array(tuple(map(operator.sub, rand_config, near_config)))
+            dir = rand_config - near_config
             norm = np.linalg.norm(dir)
             if norm == 0:
                 return rand_config
             else:
-                dir = (eta / norm) * dir  # Scaling direction to be of size at most eta
-                dir = dir.astype(int)  # Removing fractional part to get pixel coordinates
-                return [near_config[0] + dir[0], near_config[1] + dir[1]]
+                dir = (self.step_size / norm) * dir  # Scaling direction to be of size at most eta
+                return near_config + dir

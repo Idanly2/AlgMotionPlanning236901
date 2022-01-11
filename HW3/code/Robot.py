@@ -23,7 +23,7 @@ class Robot(object):
         # Visibility distance for the robot's end-effector. Farther than that, the robot won't see any points.
         self.vis_dist = 60.0
 
-    def compute_distance(self, prev_config, next_config, trivial=True):
+    def compute_distance(self, prev_config, next_config, trivial=False):
         """
         Compute the euclidean distance between two given configurations.
         @param prev_config Previous configuration.
