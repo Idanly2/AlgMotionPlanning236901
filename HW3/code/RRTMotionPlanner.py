@@ -17,12 +17,22 @@ class RRTMotionPlanner(object):
         self.ext_mode = ext_mode
 
         if self.ext_mode == "E1":
-            self.distance_threshold = 10000
-        else:
-            self.distance_threshold = 80
+            self.dist_extend_threshold = 10000
+        elif self.ext_mode == "E2":
+            self.dist_extend_threshold = 80
+        elif self.ext_mode == "E3":
+            # Angular distance mode
+            self.dist_extend_threshold = 0.4
 
-        self.step_size = 0.1
+        if self.ext_mode == "E1" or self.ext_mode == "E2":
+            self.dist_mode = 'euclidean'
+        elif self.ext_mode == "E3":
+            self.dist_mode = 'angular'
+
+        self.step_size = 0.15
         self.goal_prob = goal_prob
+
+        self.goal_reach_dist_threshold = 0.1
 
     def sample_biased(self):
         """
@@ -81,7 +91,8 @@ class RRTMotionPlanner(object):
             if self.planning_env.config_validity_checker(x_new) and \
                     self.planning_env.edge_validity_checker(x_nearest, x_new):
                 x_new_id = self.add_config(x_new, x_nearest_id)
-                if self.planning_env.robot.compute_distance(x_new, goal_config) < 0.1:
+                if self.planning_env.robot.compute_distance(x_new, goal_config,
+                                                            mode='ee_distance') < self.goal_reach_dist_threshold:
                     return x_new_id  # Technically this will always be len(self.tree.vertices) - 1
 
     def plan_to_vertex(self, vertex_id):
@@ -139,7 +150,8 @@ class RRTMotionPlanner(object):
         @param rand_config The sampled configuration.
         '''
         # TODO: Task 2.3
-        if self.planning_env.robot.compute_distance(rand_config, near_config) < self.distance_threshold:
+
+        if self.planning_env.robot.compute_distance(rand_config, near_config, mode=self.dist_mode) < self.dist_extend_threshold:
             return rand_config
         else:
             dir = rand_config - near_config
