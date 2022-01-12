@@ -1,11 +1,12 @@
 import numpy as np
 from RRTTree import RRTTree
 import time
+import operator
+
 
 class RRTInspectionPlanner(object):
 
     def __init__(self, planning_env, ext_mode, goal_prob, coverage):
-
         # set environment and search tree
         self.planning_env = planning_env
         self.tree = RRTTree(self.planning_env, task="ip")
@@ -30,7 +31,7 @@ class RRTInspectionPlanner(object):
 
         # print total path cost and time
         print('Total cost of path: {:.2f}'.format(self.compute_cost(plan)))
-        print('Total time: {:.2f}'.format(time.time()-start_time))
+        print('Total time: {:.2f}'.format(time.time() - start_time))
 
         return np.array(plan)
 
@@ -40,8 +41,10 @@ class RRTInspectionPlanner(object):
         @param plan A given plan for the robot.
         '''
         # TODO: Task 2.4
-
-        pass
+        distance = 0.0
+        for i in range(len(plan) - 1):
+            distance += self.planning_env.robot.compute_distance(plan[i], plan[i + 1])
+        return distance
 
     def extend(self, near_config, rand_config):
         '''
@@ -50,7 +53,18 @@ class RRTInspectionPlanner(object):
         @param rand_config The sampled configuration.
         '''
         # TODO: Task 2.4
+        eta = 1000
+        if self.ext_mode == 'E1':
+            eta = 1000
 
-        pass
-
-    
+        if self.planning_env.robot.compute_distance(rand_config, near_config) < eta:
+            return rand_config
+        else:
+            dir = np.array(tuple(map(operator.sub, rand_config, near_config)))
+            norm = np.linalg.norm(dir)
+            if norm == 0:
+                return rand_config
+            else:
+                dir = (eta / norm) * dir  # Scaling direction to be of size at most eta
+                dir = dir.astype(int)  # Removing fractional part to get pixel coordinates
+                return [near_config[0] + dir[0], near_config[1] + dir[1]]

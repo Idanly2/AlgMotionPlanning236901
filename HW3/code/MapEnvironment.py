@@ -197,7 +197,7 @@ class MapEnvironment(object):
         vec = vec / np.linalg.norm(vec)
         if vec[1] > 0:
             return np.arccos(vec[0])
-        else: # vec[1] <= 0
+        else:  # vec[1] <= 0
             return -np.arccos(vec[0])
 
     def check_if_angle_in_range(self, angle, ee_range):
@@ -224,8 +224,7 @@ class MapEnvironment(object):
         @param points2 list of inspected points.
         '''
         # TODO: Task 2.4
-
-        pass
+        return np.array([list(y) for y in set([tuple(x) for x in points1]).union(set([tuple(x) for x in points2]))])
 
     def compute_coverage(self, inspected_points):
         '''
@@ -369,9 +368,9 @@ class MapEnvironment(object):
         robot_positions = np.concatenate([np.zeros((1,2)), robot_positions])
 
         # draw the robot
-        plt.plot(robot_positions[:,0], robot_positions[:,1], 'coral', linewidth=3.0, zorder=10) # joints
-        plt.scatter(robot_positions[:,0], robot_positions[:,1], zorder=15) # joints
-        plt.scatter(robot_positions[-1:,0], robot_positions[-1:,1], color='cornflowerblue', zorder=15) # end-effector
+        plt.plot(robot_positions[:, 0], robot_positions[:, 1], 'coral', linewidth=3.0, zorder=10)  # joints
+        plt.scatter(robot_positions[:, 0], robot_positions[:, 1], zorder=15) # joints
+        plt.scatter(robot_positions[-1:, 0], robot_positions[-1:, 1], color='cornflowerblue', zorder=15)  # end-effector
 
         # add "visibility cone" to demonstrate what the robot sees
         if self.task == 'ip':
@@ -412,7 +411,7 @@ class MapEnvironment(object):
         @param plan Sequence of configs defining the plan.
         '''
         # switch backend
-        # matplotlib.use('TkAgg')
+        matplotlib.use('TkAgg')
 
         # interpolate plan and get inspected points
         plan = self.interpolate_plan(plan_configs=plan)
