@@ -40,7 +40,7 @@ class RRTTree(object):
         @param eid end state ID
         '''
         self.edges[eid] = sid
-        self.vertices[eid].set_cost(cost=self.vertices[sid].cost + edge_cost)
+        self.vertices[eid].cost = self.vertices[sid].cost + edge_cost
 
     def is_goal_exists(self, config):
         '''
@@ -77,7 +77,22 @@ class RRTTree(object):
         Find the nearest vertex for the given config and returns its state index and configuration
         @param config Sampled configuration.
         '''
+        # compute distances from all vertices
+        dists = []
+        for _, vertex in self.vertices.items():
+            dists.append(self.planning_env.robot.compute_distance(config, vertex.config))
 
+        # retrieve the id of the nearest vertex
+        vid, _ = min(enumerate(dists), key=operator.itemgetter(1))
+
+        return vid, self.vertices[vid].config
+
+    def get_nearest_config_approx(self, config):
+        '''
+        Find the nearest vertex for the given config and returns its state index and configuration. Uses an approximate
+        but vectorized implementation of computing the ditances.
+        @param config Sampled configuration.
+        '''
         ws_pose_flattened = self.planning_env.robot.flattened_forward_kinematics(config)
         vertices_poses_flattened = np.zeros(shape=(len(self.vertices), 8))
         for k, v in self.vertices.items():
@@ -87,15 +102,18 @@ class RRTTree(object):
         minimal_ind = np.argmin(distances)
         return minimal_ind, self.vertices[minimal_ind].config
 
-        # compute distances from all vertices
-        # dists = []
-        # for _, vertex in self.vertices.items():
-        #     dists.append(self.planning_env.robot.compute_distance(config, vertex.config))
-        #
-        # # retrieve the id of the nearest vertex
-        # vid, _ = min(enumerate(dists), key=operator.itemgetter(1))
-        #
-        # return vid, self.vertices[vid].config
+    def get_nearest_config_ee_point(self, target_point):
+        '''
+        Find the nearest vertex for the given config and returns its state index and configuration
+        @param config Sampled configuration.
+        '''
+        vertices_poses_flattened = np.zeros(shape=(len(self.vertices), 2))
+        for k, v in self.vertices.items():
+            vertices_poses_flattened[k, :] = v.ws_pose[-1, :]
+
+        distances = self.planning_env.robot.compute_distance_squared_approx(target_point, vertices_poses_flattened)
+        minimal_ind = np.argmin(distances)
+        return minimal_ind, self.vertices[minimal_ind].config
 
 
 class RRTVertex(object):
@@ -105,15 +123,3 @@ class RRTVertex(object):
         self.ws_pose = ws_pose
         self.cost = cost
         self.inspected_points = inspected_points
-
-    def set_cost(self, cost):
-        '''
-        Set the cost of the vertex.
-        '''
-        self.cost = cost
-
-    def set_ws_pose(self, ws_pose):
-        '''
-        Sets the workspace pose of the links corresponding to this c-space configuration.
-        '''
-        self.ws_pose = ws_pose

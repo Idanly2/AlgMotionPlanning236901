@@ -15,10 +15,6 @@ class RRTMotionPlanner(object):
 
         # set search params
         self.ext_mode = ext_mode
-
-        if self.ext_mode == "E1" or self.ext_mode == "E2":
-            self.dist_mode = 'euclidean'
-
         self.goal_prob = goal_prob
 
         # Parameters
@@ -36,7 +32,7 @@ class RRTMotionPlanner(object):
         """
         p = np.random.random()
         if p < self.goal_prob:
-            return self.planning_env.goal
+            return self.get_goal_config()
         else:
             theta_1 = np.random.uniform(0, np.pi / 2)
             while True:
@@ -71,10 +67,13 @@ class RRTMotionPlanner(object):
                     break
             return np.array([theta_1, theta_2, theta_3, theta_4])
 
+    def get_goal_config(self):
+        return self.planning_env.goal
+
     def add_config(self, x_add, ws_pose, parent_id=None, cost=0):
         x_add_id = self.tree.add_vertex(x_add)
-        self.tree.vertices[x_add_id].set_cost(cost)
-        self.tree.vertices[x_add_id].set_ws_pose(ws_pose)
+        self.tree.vertices[x_add_id].cost = cost
+        self.tree.vertices[x_add_id].ws_pose = ws_pose
         if parent_id is not None:
             self.tree.add_edge(parent_id, x_add_id)  # Edges indicate the parent of each node
         return x_add_id
@@ -82,7 +81,7 @@ class RRTMotionPlanner(object):
     def build_tree(self, goal_config):
         while True:
             x_random = self.sample_biased()
-            x_nearest_id, x_nearest = self.tree.get_nearest_config(x_random)
+            x_nearest_id, x_nearest = self.tree.get_nearest_config_approx(x_random)
             x_new = self.extend(x_nearest, x_random)
             if self.planning_env.config_validity_checker(x_new) and \
                     self.planning_env.edge_validity_checker(x_nearest, x_new):
@@ -92,7 +91,7 @@ class RRTMotionPlanner(object):
                 if self.planning_env.robot.compute_ee_distance(x_new, goal_config) < self.goal_reach_dist_threshold:
                     return x_new_id  # Technically this will always be len(self.tree.vertices) - 1
             # else:
-                # self.num_discarded += 1
+            # self.num_discarded += 1
             # print("ratio added: ", self.num_added / (self.num_added + self.num_discarded))
 
     def plan_to_vertex(self, vertex_id):
@@ -114,8 +113,6 @@ class RRTMotionPlanner(object):
         # Start with adding the start configuration to the tree.
         start_config = self.planning_env.start
         self.add_config(start_config, self.planning_env.robot.compute_forward_kinematics(start_config))
-        # Initialize an empty plan.
-        plan = []
 
         # TODO: Task 2.3
         goal_config = self.planning_env.goal
@@ -159,4 +156,4 @@ class RRTMotionPlanner(object):
                 scale = np.minimum(norm, self.step_size / norm)
                 # Normalize the step vector to the minimal of step_size, or until rand_config is reached
                 dir = scale * dir  # Scaling direction to be of size at most step_size
-                return near_config + dir
+                return self.planning_env.robot.wrap_to_pi(near_config + dir)

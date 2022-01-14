@@ -224,7 +224,11 @@ class MapEnvironment(object):
         @param points2 list of inspected points.
         '''
         # TODO: Task 2.4
-        return np.array([list(y) for y in set([tuple(x) for x in points1]).union(set([tuple(x) for x in points2]))])
+        if points1.size == 0:
+            return points2
+        elif points2.size == 0:
+            return points1
+        return np.unique(np.vstack([points1, points2]), axis=0)
 
     def compute_coverage(self, inspected_points):
         '''
