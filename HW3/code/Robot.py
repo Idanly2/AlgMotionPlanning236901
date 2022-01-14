@@ -6,10 +6,6 @@ from numpy.core.fromnumeric import size
 from shapely.geometry import Point, LineString
 
 
-def wrap_to_pi(angles):
-    return (angles + np.pi) % (2 * np.pi) - np.pi
-
-
 class Robot(object):
 
     def __init__(self):
@@ -27,34 +23,38 @@ class Robot(object):
         # Visibility distance for the robot's end-effector. Farther than that, the robot won't see any points.
         self.vis_dist = 60.0
 
-    def compute_distance(self, prev_config, next_config, mode='euclidean'):
+    def compute_distance(self, prev_config, next_config):
         """
         Compute the euclidean distance between two given configurations.
         @param prev_config Previous configuration.
         @param next_config Next configuration.
-        @param mode one of 'ee_distance', 'euclidean', 'angular'
         """
         # TODO: Task 2.2
 
-        # Trivial implementation - only compare end effector distance
-        # Non-trivial - sum of distances between corresponding links' positions
+        forward_kinematics_prev = self.compute_forward_kinematics(prev_config)
+        forward_kinematics_next = self.compute_forward_kinematics(next_config)
+        # Sum of distances between each corre
+        return np.sum(np.linalg.norm(forward_kinematics_prev - forward_kinematics_next, axis=1))
 
-        distance = 0.0
+    def compute_distance_squared_approx(self, target_ws_pose, ws_poses):
+        """
+        Fast calculation of
+        @param target_ws_pose np array: 8
+        @param ws_poses np array Nx8
+        """
+        # TODO: Task 2.2
 
-        if mode == 'ee_distance':
-            forward_kinematics_prev = self.compute_forward_kinematics(prev_config)
-            forward_kinematics_next = self.compute_forward_kinematics(next_config)
-            # Distance between the end effector in each configuration
-            distance += np.linalg.norm(forward_kinematics_prev[-1, :] - forward_kinematics_next[-1, :])
-        elif mode == 'euclidean':
-            forward_kinematics_prev = self.compute_forward_kinematics(prev_config)
-            forward_kinematics_next = self.compute_forward_kinematics(next_config)
-            # Sum of distances between each corre
-            distance += np.sum(np.linalg.norm(forward_kinematics_prev - forward_kinematics_next, axis=1))
-        elif mode == 'angular':
-            # Maximum difference in angle of each joint
-            distance += np.max(np.abs(wrap_to_pi(prev_config - next_config)))
-        return distance
+        diff = ws_poses - target_ws_pose
+        if len(ws_poses.shape) > 1 and ws_poses.shape[0] > 1:
+            return np.einsum('ij,ij->i', diff, diff)
+        else:
+            return np.inner(diff, diff)
+
+    def compute_ee_distance(self, prev_config, next_config):
+        forward_kinematics_prev = self.compute_forward_kinematics(prev_config)
+        forward_kinematics_next = self.compute_forward_kinematics(next_config)
+        # Distance between the end effector in each configuration
+        return np.linalg.norm(forward_kinematics_prev[-1, :] - forward_kinematics_next[-1, :])
 
     def compute_forward_kinematics(self, given_config):
         """
@@ -83,6 +83,9 @@ class Robot(object):
             links_positions[i, :] = current_link_position
 
         return links_positions
+
+    def flattened_forward_kinematics(self, given_config):
+        return self.compute_forward_kinematics(given_config).flatten()
 
     def compute_ee_angle(self, given_config):
         '''
@@ -121,3 +124,6 @@ class Robot(object):
         manipulator_lines = LineString([robot_positions[i, :] for i in range(len(robot_positions))])
         # is_simple is True when the LineString does not self-intersect.
         return manipulator_lines.is_simple
+
+    def wrap_to_pi(self, angles):
+        return (angles + np.pi) % (2 * np.pi) - np.pi

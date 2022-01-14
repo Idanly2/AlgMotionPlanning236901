@@ -1,10 +1,11 @@
 import operator
-import numpy
+import numpy as np
+
 
 class RRTTree(object):
-    
+
     def __init__(self, planning_env, task="mp"):
-        
+
         self.planning_env = planning_env
         self.task = task
         self.vertices = {}
@@ -76,21 +77,32 @@ class RRTTree(object):
         Find the nearest vertex for the given config and returns its state index and configuration
         @param config Sampled configuration.
         '''
+
+        ws_pose_flattened = self.planning_env.robot.flattened_forward_kinematics(config)
+        vertices_poses_flattened = np.zeros(shape=(len(self.vertices), 8))
+        for k, v in self.vertices.items():
+            vertices_poses_flattened[k, :] = v.ws_pose.flatten()
+
+        distances = self.planning_env.robot.compute_distance_squared_approx(ws_pose_flattened, vertices_poses_flattened)
+        minimal_ind = np.argmin(distances)
+        return minimal_ind, self.vertices[minimal_ind].config
+
         # compute distances from all vertices
-        dists = []
-        for _, vertex in self.vertices.items():
-            dists.append(self.planning_env.robot.compute_distance(config, vertex.config))
+        # dists = []
+        # for _, vertex in self.vertices.items():
+        #     dists.append(self.planning_env.robot.compute_distance(config, vertex.config))
+        #
+        # # retrieve the id of the nearest vertex
+        # vid, _ = min(enumerate(dists), key=operator.itemgetter(1))
+        #
+        # return vid, self.vertices[vid].config
 
-        # retrieve the id of the nearest vertex
-        vid, _ = min(enumerate(dists), key=operator.itemgetter(1))
-
-        return vid, self.vertices[vid].config
 
 class RRTVertex(object):
 
-    def __init__(self, config, cost=0, inspected_points=None):
-
+    def __init__(self, config, ws_pose=np.array([]), cost=0, inspected_points=None):
         self.config = config
+        self.ws_pose = ws_pose
         self.cost = cost
         self.inspected_points = inspected_points
 
@@ -99,3 +111,9 @@ class RRTVertex(object):
         Set the cost of the vertex.
         '''
         self.cost = cost
+
+    def set_ws_pose(self, ws_pose):
+        '''
+        Sets the workspace pose of the links corresponding to this c-space configuration.
+        '''
+        self.ws_pose = ws_pose

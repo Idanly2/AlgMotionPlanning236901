@@ -16,23 +16,17 @@ class RRTMotionPlanner(object):
         # set search params
         self.ext_mode = ext_mode
 
-        if self.ext_mode == "E1":
-            self.dist_extend_threshold = 10000
-        elif self.ext_mode == "E2":
-            self.dist_extend_threshold = 80
-        elif self.ext_mode == "E3":
-            # Angular distance mode
-            self.dist_extend_threshold = 0.4
-
         if self.ext_mode == "E1" or self.ext_mode == "E2":
             self.dist_mode = 'euclidean'
-        elif self.ext_mode == "E3":
-            self.dist_mode = 'angular'
 
-        self.step_size = 0.15
         self.goal_prob = goal_prob
 
-        self.goal_reach_dist_threshold = 0.1
+        # Parameters
+        self.step_size = 0.2
+        self.goal_reach_dist_threshold = 2.0
+
+        self.num_added = 0
+        self.num_discarded = 0
 
     def sample_biased(self):
         """
@@ -77,8 +71,10 @@ class RRTMotionPlanner(object):
                     break
             return np.array([theta_1, theta_2, theta_3, theta_4])
 
-    def add_config(self, x_add, parent_id=None):
+    def add_config(self, x_add, ws_pose, parent_id=None, cost=0):
         x_add_id = self.tree.add_vertex(x_add)
+        self.tree.vertices[x_add_id].set_cost(cost)
+        self.tree.vertices[x_add_id].set_ws_pose(ws_pose)
         if parent_id is not None:
             self.tree.add_edge(parent_id, x_add_id)  # Edges indicate the parent of each node
         return x_add_id
@@ -90,10 +86,14 @@ class RRTMotionPlanner(object):
             x_new = self.extend(x_nearest, x_random)
             if self.planning_env.config_validity_checker(x_new) and \
                     self.planning_env.edge_validity_checker(x_nearest, x_new):
-                x_new_id = self.add_config(x_new, x_nearest_id)
-                if self.planning_env.robot.compute_distance(x_new, goal_config,
-                                                            mode='ee_distance') < self.goal_reach_dist_threshold:
+                x_new_id = self.add_config(x_new, ws_pose=self.planning_env.robot.compute_forward_kinematics(x_new),
+                                           parent_id=x_nearest_id)
+                # self.num_added += 1
+                if self.planning_env.robot.compute_ee_distance(x_new, goal_config) < self.goal_reach_dist_threshold:
                     return x_new_id  # Technically this will always be len(self.tree.vertices) - 1
+            # else:
+                # self.num_discarded += 1
+            # print("ratio added: ", self.num_added / (self.num_added + self.num_discarded))
 
     def plan_to_vertex(self, vertex_id):
         plan = []
@@ -113,7 +113,7 @@ class RRTMotionPlanner(object):
         start_time = time.time()
         # Start with adding the start configuration to the tree.
         start_config = self.planning_env.start
-        self.add_config(start_config)
+        self.add_config(start_config, self.planning_env.robot.compute_forward_kinematics(start_config))
         # Initialize an empty plan.
         plan = []
 
@@ -122,15 +122,12 @@ class RRTMotionPlanner(object):
         goal_vertex_id = self.build_tree(goal_config=goal_config)
         plan_list_of_trees = self.plan_to_vertex(goal_vertex_id)
         end_time = time.time()
-        plan = plan_list_of_trees[0].config
-        for i in range(1, len(plan_list_of_trees)):
-            plan = np.vstack((plan, plan_list_of_trees[i].config))
-
+        plan = np.vstack([vertex.config for vertex in plan_list_of_trees])
         # print total path cost and time
         print('Total cost of path: {:.2f}'.format(self.compute_cost(plan)))
         print('Total planning time: {:.2f}'.format(end_time - start_time))
 
-        return np.array(plan)
+        return plan
 
     def compute_cost(self, plan):
         '''
@@ -150,14 +147,16 @@ class RRTMotionPlanner(object):
         @param rand_config The sampled configuration.
         '''
         # TODO: Task 2.3
-
-        if self.planning_env.robot.compute_distance(rand_config, near_config, mode=self.dist_mode) < self.dist_extend_threshold:
+        if self.ext_mode == "E1":
             return rand_config
         else:
-            dir = rand_config - near_config
+            # Need to determine the direction of extension by wrapping angle diff
+            dir = self.planning_env.robot.wrap_to_pi(rand_config - near_config)
             norm = np.linalg.norm(dir)
             if norm == 0:
                 return rand_config
             else:
-                dir = (self.step_size / norm) * dir  # Scaling direction to be of size at most eta
+                scale = np.minimum(norm, self.step_size / norm)
+                # Normalize the step vector to the minimal of step_size, or until rand_config is reached
+                dir = scale * dir  # Scaling direction to be of size at most step_size
                 return near_config + dir

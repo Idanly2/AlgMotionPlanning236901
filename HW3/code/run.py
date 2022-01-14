@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # setup the planner
     if args.task == 'mp':
         planner = RRTMotionPlanner(planning_env=planning_env, ext_mode=args.ext_mode, goal_prob=args.goal_prob)
-    else: # args.task == 'ip'
+    else:  # args.task == 'ip'
         planner = RRTInspectionPlanner(planning_env=planning_env, ext_mode=args.ext_mode, goal_prob=args.goal_prob, coverage=args.coverage)
     
     # execute plan
