@@ -70,9 +70,8 @@ class RRTMotionPlanner(object):
     def get_goal_config(self):
         return self.planning_env.goal
 
-    def add_config(self, x_add, ws_pose, parent_id=None, cost=0):
+    def add_config(self, x_add, ws_pose, parent_id=None):
         x_add_id = self.tree.add_vertex(x_add)
-        self.tree.vertices[x_add_id].cost = cost
         self.tree.vertices[x_add_id].ws_pose = ws_pose
         if parent_id is not None:
             self.tree.add_edge(parent_id, x_add_id)  # Edges indicate the parent of each node

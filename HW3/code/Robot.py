@@ -145,7 +145,7 @@ class Robot(object):
         last_cost = self.view_cost_function(current_ee_pose, target_point_to_view)
         # While convergence threhold is not reached and max_iter is not exceeded:
         while True:
-            if num_iter > max_iter or last_cost < 1 or step_size < 1e-15:
+            if num_iter > max_iter or last_cost < 1 or step_size < 1e-8:
                 break
             # Compute gradient at current point
             curr_grad = np.dot(self.ee_pose_jacobian(current_config).T,

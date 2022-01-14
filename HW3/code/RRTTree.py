@@ -26,12 +26,16 @@ class RRTTree(object):
 
         # check if vertex has the highest coverage so far, and replace if so
         if self.task == "ip":
-            v_coverage = self.planning_env.compute_coverage(inspected_points=inspected_points)
-            if v_coverage > self.max_coverage:
-                self.max_coverage = v_coverage
-                self.max_coverage_id = vid
+            self.set_inspected_points(vid, inspected_points)
 
         return vid
+
+    def set_inspected_points(self, vid, inspected_points):
+        self.vertices[vid].inspected_points = inspected_points
+        v_coverage = self.planning_env.compute_coverage(inspected_points=inspected_points)
+        if v_coverage > self.max_coverage:
+            self.max_coverage = v_coverage
+            self.max_coverage_id = vid
 
     def add_edge(self, sid, eid, edge_cost=0):
         '''
@@ -101,6 +105,15 @@ class RRTTree(object):
         distances = self.planning_env.robot.compute_distance_squared_approx(ws_pose_flattened, vertices_poses_flattened)
         minimal_ind = np.argmin(distances)
         return minimal_ind, self.vertices[minimal_ind].config
+
+    def get_knn(self, config, num_knn):
+        ws_pose_flattened = self.planning_env.robot.flattened_forward_kinematics(config)
+        vertices_poses_flattened = np.zeros(shape=(len(self.vertices), 8))
+        for k, v in self.vertices.items():
+            vertices_poses_flattened[k, :] = v.ws_pose.flatten()
+
+        distances = self.planning_env.robot.compute_distance_squared_approx(ws_pose_flattened, vertices_poses_flattened)
+        return np.argpartition(distances, num_knn)[:num_knn]
 
     def get_nearest_config_ee_point(self, target_point):
         '''

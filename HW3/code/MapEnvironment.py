@@ -12,8 +12,9 @@ from Robot import Robot
 from shapely.geometry import Point, LineString, Polygon
 import imageio
 
+
 class MapEnvironment(object):
-    
+
     def __init__(self, json_file, task):
 
         # check if json file exists and load
@@ -26,8 +27,8 @@ class MapEnvironment(object):
 
         # obtain boundary limits, start and inspection points
         self.task = task
-        self.xlimit = [0, json_dict['WIDTH']-1]
-        self.ylimit = [0, json_dict['HEIGHT']-1]
+        self.xlimit = [0, json_dict['WIDTH'] - 1]
+        self.ylimit = [0, json_dict['HEIGHT'] - 1]
         self.start = np.array(json_dict['START'])
         self.load_obstacles(obstacles=json_dict['OBSTACLES'])
 
@@ -51,7 +52,7 @@ class MapEnvironment(object):
             exit(0)
 
         # if you want to - you can display starting map here
-        #self.visualize_map(config=self.start)
+        # self.visualize_map(config=self.start)
 
     def load_obstacles(self, obstacles):
         '''
@@ -61,15 +62,18 @@ class MapEnvironment(object):
         # iterate over all obstacles
         self.obstacles, self.obstacles_edges = [], []
         for obstacle in obstacles:
-            non_applicable_vertices = [x[0] < self.xlimit[0] or x[0] > self.xlimit[1] or x[1] < self.ylimit[0] or x[1] > self.ylimit[1] for x in obstacle]
+            non_applicable_vertices = [
+                x[0] < self.xlimit[0] or x[0] > self.xlimit[1] or x[1] < self.ylimit[0] or x[1] > self.ylimit[1] for x
+                in obstacle]
             if any(non_applicable_vertices):
                 raise ValueError('An obstacle coincides with the maps boundaries!');
                 exit(0)
-            
+
             # make sure that the obstacle is a closed form
             if obstacle[0] != obstacle[-1]:
                 obstacle.append(obstacle[0])
-                self.obstacles_edges.append([LineString([Point(x[0],x[1]),Point(y[0],y[1])]) for (x,y) in zip(obstacle[:-1], obstacle[1:])])
+                self.obstacles_edges.append(
+                    [LineString([Point(x[0], x[1]), Point(y[0], y[1])]) for (x, y) in zip(obstacle[:-1], obstacle[1:])])
             self.obstacles.append(obstacle)
 
     def config_validity_checker(self, config):
@@ -82,20 +86,23 @@ class MapEnvironment(object):
         robot_positions = self.robot.compute_forward_kinematics(given_config=config)
 
         # add position of robot placement ([0,0] - position of the first joint)
-        robot_positions = np.concatenate([np.zeros((1,2)), robot_positions])
+        robot_positions = np.concatenate([np.zeros((1, 2)), robot_positions])
 
         # verify that the robot do not collide with itself
         if not self.robot.validate_robot(robot_positions=robot_positions):
             return False
 
         # verify that all robot joints (and links) are between world boundaries
-        non_applicable_poses = [(x[0] < self.xlimit[0] or x[1] < self.ylimit[0] or x[0] > self.xlimit[1] or x[1] > self.ylimit[1]) for x in robot_positions]
+        non_applicable_poses = [
+            (x[0] < self.xlimit[0] or x[1] < self.ylimit[0] or x[0] > self.xlimit[1] or x[1] > self.ylimit[1]) for x in
+            robot_positions]
         if any(non_applicable_poses):
             return False
 
         # verify that all robot links do not collide with obstacle edges
         # for each obstacle, check collision with each of the robot links
-        robot_links = [LineString([Point(x[0],x[1]),Point(y[0],y[1])]) for x,y in zip(robot_positions.tolist()[:-1], robot_positions.tolist()[1:])]
+        robot_links = [LineString([Point(x[0], x[1]), Point(y[0], y[1])]) for x, y in
+                       zip(robot_positions.tolist()[:-1], robot_positions.tolist()[1:])]
         for obstacle_edges in self.obstacles_edges:
             for robot_link in robot_links:
                 obstacle_collisions = [robot_link.crosses(x) for x in obstacle_edges]
@@ -113,18 +120,20 @@ class MapEnvironment(object):
         '''
         # interpolate between first config and second config to verify that there is no collision during the motion
         required_diff = 0.05
-        interpolation_steps = int(np.linalg.norm(config2 - config1)//required_diff)
+        interpolation_steps = int(np.linalg.norm(config2 - config1) // required_diff)
         if interpolation_steps > 0:
             interpolated_configs = np.linspace(start=config1, stop=config2, num=interpolation_steps)
-            
+
             # compute robot links positions for interpolated configs
             configs_positions = np.apply_along_axis(self.robot.compute_forward_kinematics, 1, interpolated_configs)
 
             # compute edges between joints to verify that the motion between two configs does not collide with anything
             edges_between_positions = []
             for j in range(self.robot.dim):
-                for i in range(interpolation_steps-1):
-                    edges_between_positions.append(LineString([Point(configs_positions[i,j,0],configs_positions[i,j,1]),Point(configs_positions[i+1,j,0],configs_positions[i+1,j,1])]))
+                for i in range(interpolation_steps - 1):
+                    edges_between_positions.append(LineString(
+                        [Point(configs_positions[i, j, 0], configs_positions[i, j, 1]),
+                         Point(configs_positions[i + 1, j, 0], configs_positions[i + 1, j, 1])]))
 
             # check collision for each edge between joints and each obstacle
             for edge_pos in edges_between_positions:
@@ -134,7 +143,7 @@ class MapEnvironment(object):
                         return False
 
             # add position of robot placement ([0,0] - position of the first joint)
-            configs_positions = np.concatenate([np.zeros((len(configs_positions),1,2)), configs_positions], axis=1)
+            configs_positions = np.concatenate([np.zeros((len(configs_positions), 1, 2)), configs_positions], axis=1)
 
             # verify that the robot do not collide with itself during motion
             for config_positions in configs_positions:
@@ -152,9 +161,9 @@ class MapEnvironment(object):
         # get robot end-effector position and orientation for point of view
         ee_pos = self.robot.compute_forward_kinematics(given_config=config)[-1]
         ee_angle = self.robot.compute_ee_angle(given_config=config)
-        
+
         # define angle range for the ee given its position and field of view (FOV)
-        ee_angle_range = np.array([ee_angle - self.robot.ee_fov/2, ee_angle + self.robot.ee_fov/2])
+        ee_angle_range = np.array([ee_angle - self.robot.ee_fov / 2, ee_angle + self.robot.ee_fov / 2])
 
         # iterate over all inspection points to find which of them are currently inspected
         inspected_points = np.array([])
@@ -171,8 +180,9 @@ class MapEnvironment(object):
                 if self.check_if_angle_in_range(angle=inspection_point_angle, ee_range=ee_angle_range):
 
                     # define the segment between the inspection point and the ee
-                    ee_to_inspection_point = LineString([Point(ee_pos[0],ee_pos[1]),Point(inspection_point[0],inspection_point[1])]) 
-                    
+                    ee_to_inspection_point = LineString(
+                        [Point(ee_pos[0], ee_pos[1]), Point(inspection_point[0], inspection_point[1])])
+
                     # check if there are any collisions of the vector with some obstacle edge
                     inspection_point_hidden = False
                     for obstacle_edges in self.obstacles_edges:
@@ -230,12 +240,28 @@ class MapEnvironment(object):
             return points1
         return np.unique(np.vstack([points1, points2]), axis=0)
 
+    def compute_diff_of_points(self, points1, points2):
+        '''
+        Compute a difference of two sets of inpection points.
+        :param: points1 list of inspected points.
+        :param: points2 list of inspected points.
+        :return: points1 - points2
+        '''
+        # TODO: Task 2.4
+        if points1.size == 0 or points2.size == 0:
+            return points1
+        # Reference:
+        # https://stackoverflow.com/questions/11903083/find-the-set-difference-between-two-large-arrays-matrices-in-python
+        points1_rows = points1.view([('', points1.dtype)] * points1.shape[1])
+        points2_rows = points2.view([('', points2.dtype)] * points2.shape[1])
+        return np.setdiff1d(points1_rows, points2_rows).view(points1.dtype).reshape(-1, points1.shape[1])
+
     def compute_coverage(self, inspected_points):
         '''
         Compute the coverage of the map as the portion of points that were already inspected.
         @param inspected_points list of inspected points.
         '''
-        return len(inspected_points)/len(self.inspection_points)
+        return len(inspected_points) / len(self.inspection_points)
 
     # ------------------------#
     # Visualization Functions
@@ -249,11 +275,11 @@ class MapEnvironment(object):
 
         # interpolate configs list
         plan_configs_interpolated = []
-        for i in range(len(plan_configs)-1):
-
+        for i in range(len(plan_configs) - 1):
             # number of steps to add from i to i+1
-            interpolation_steps = int(np.linalg.norm(plan_configs[i+1] - plan_configs[i])//required_diff) + 1
-            interpolated_configs = np.linspace(start=plan_configs[i], stop=plan_configs[i+1], endpoint=False, num=interpolation_steps)
+            interpolation_steps = int(np.linalg.norm(plan_configs[i + 1] - plan_configs[i]) // required_diff) + 1
+            interpolated_configs = np.linspace(start=plan_configs[i], stop=plan_configs[i + 1], endpoint=False,
+                                               num=interpolation_steps)
             plan_configs_interpolated += list(interpolated_configs)
 
         # add goal vertex
@@ -271,7 +297,7 @@ class MapEnvironment(object):
         for i, config in enumerate(plan_configs):
             inspected_points = self.get_inspected_points(config=config)
             if i > 0:
-                inspected_points = self.compute_union_of_points(points1=plan_inspected[i-1], points2=inspected_points)
+                inspected_points = self.compute_union_of_points(points1=plan_inspected[i - 1], points2=inspected_points)
             plan_inspected.append(inspected_points)
 
         return plan_inspected
@@ -294,7 +320,7 @@ class MapEnvironment(object):
         # add goal or inspection points
         if self.task == 'ip':
             plt = self.visualize_inspection_points(plt=plt)
-        else: # self.task == 'mp'
+        else:  # self.task == 'mp'
             plt = self.visualize_point_location(plt=plt, config=self.goal, color='g')
 
         # add robot
@@ -312,7 +338,7 @@ class MapEnvironment(object):
         '''
         # create figure and add background
         plt.figure()
-        back_img = np.zeros((self.ylimit[1]+1, self.xlimit[1]+1))
+        back_img = np.zeros((self.ylimit[1] + 1, self.xlimit[1] + 1))
         plt.imshow(back_img, origin='lower', zorder=0)
 
         return plt
@@ -328,7 +354,7 @@ class MapEnvironment(object):
             plt.fill(obstacle_xs, obstacle_ys, "y", zorder=5)
 
         return plt
-    
+
     def visualize_point_location(self, plt, config, color):
         '''
         Draw a point of start/goal on top of the given frame.
@@ -342,7 +368,7 @@ class MapEnvironment(object):
         # draw the circle
         point_circ = plt.Circle(point_loc, radius=5, color=color, zorder=5)
         plt.gca().add_patch(point_circ)
-    
+
         return plt
 
     def visualize_inspection_points(self, plt, inspected_points=None):
@@ -351,11 +377,11 @@ class MapEnvironment(object):
         @param plt Plot of a frame of the plan.
         @param inspected_points list of inspected points.
         '''
-        plt.scatter(self.inspection_points[:,0], self.inspection_points[:,1], color='lime', zorder=5, s=3)
+        plt.scatter(self.inspection_points[:, 0], self.inspection_points[:, 1], color='lime', zorder=5, s=3)
 
         # if given inspected points
         if inspected_points is not None and len(inspected_points) > 0:
-            plt.scatter(inspected_points[:,0], inspected_points[:,1], color='g', zorder=6, s=3)
+            plt.scatter(inspected_points[:, 0], inspected_points[:, 1], color='g', zorder=6, s=3)
 
         return plt
 
@@ -369,22 +395,23 @@ class MapEnvironment(object):
         robot_positions = self.robot.compute_forward_kinematics(given_config=config)
 
         # add position of robot placement ([0,0] - position of the first joint)
-        robot_positions = np.concatenate([np.zeros((1,2)), robot_positions])
+        robot_positions = np.concatenate([np.zeros((1, 2)), robot_positions])
 
         # draw the robot
         plt.plot(robot_positions[:, 0], robot_positions[:, 1], 'coral', linewidth=3.0, zorder=10)  # joints
-        plt.scatter(robot_positions[:, 0], robot_positions[:, 1], zorder=15) # joints
+        plt.scatter(robot_positions[:, 0], robot_positions[:, 1], zorder=15)  # joints
         plt.scatter(robot_positions[-1:, 0], robot_positions[-1:, 1], color='cornflowerblue', zorder=15)  # end-effector
 
         # add "visibility cone" to demonstrate what the robot sees
         if self.task == 'ip':
             # define the length of the cone and origin
             visibility_radius = 15
-            cone_origin = robot_positions[-1,:].tolist()
+            cone_origin = robot_positions[-1, :].tolist()
 
             # compute a pixeled arc for the cone
             robot_ee_angle = self.robot.compute_ee_angle(given_config=config)
-            robot_fov_angles = np.linspace(start=self.robot.ee_fov/2, stop=-self.robot.ee_fov/2, num=visibility_radius)
+            robot_fov_angles = np.linspace(start=self.robot.ee_fov / 2, stop=-self.robot.ee_fov / 2,
+                                           num=visibility_radius)
             robot_fov_angles = np.expand_dims(np.tile(robot_ee_angle, robot_fov_angles.size) + robot_fov_angles, axis=0)
             robot_ee_angles = np.apply_along_axis(self.get_normalized_angle, 0, robot_fov_angles)
             robot_ee_xs = cone_origin[0] + visibility_radius * np.cos(robot_ee_angles)
@@ -403,9 +430,9 @@ class MapEnvironment(object):
         @param angle The angle of the robot's ee
         '''
         if angle > np.pi:
-            return angle - 2*np.pi
+            return angle - 2 * np.pi
         elif angle < -np.pi:
-            return angle + 2*np.pi
+            return angle + 2 * np.pi
         else:
             return angle
 
@@ -434,7 +461,7 @@ class MapEnvironment(object):
             # add goal or inspection points
             if self.task == 'mp':
                 plt = self.visualize_point_location(plt=plt, config=self.goal, color='g')
-            else: # self.task == 'ip'
+            else:  # self.task == 'ip'
                 plt = self.visualize_inspection_points(plt=plt, inspected_points=plan_inspected[i])
 
             # add robot with current plan step
@@ -446,7 +473,7 @@ class MapEnvironment(object):
             data = np.fromstring(canvas.tostring_rgb(), dtype=np.uint8, sep='')
             data = data.reshape(canvas.get_width_height()[::-1] + (3,))
             plan_images.append(data)
-        
+
         # store gif
         plan_time = datetime.now().strftime("%d-%m-%Y_%H:%M:%S")
         imageio.mimsave(f'plan_{plan_time}.gif', plan_images, 'GIF', duration=0.05)
