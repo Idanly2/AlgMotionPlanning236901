@@ -136,8 +136,8 @@ class RRTTree(object):
         for key in self.edges:
             edges_list.append(np.hstack([self.vertices[self.edges[key]].ws_pose[-1, :],
                                          self.vertices[key].ws_pose[-1, :]]))
-        fake_plan = np.array(edges_list)
-        self.planning_env.visualize_tree(fake_plan)
+        edges_list = np.array(edges_list)
+        self.planning_env.visualize_tree(edges_list)
 
 
 class RRTVertex(object):

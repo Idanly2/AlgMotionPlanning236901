@@ -111,7 +111,6 @@ class RRTMotionPlanner(object):
         '''
         Compute and return the plan. The function should return a numpy array containing the states in the configuration space.
         '''
-        start_time = time.time()
         # Start with adding the start configuration to the tree.
         start_config = self.planning_env.start
         self.add_config(start_config, self.planning_env.robot.compute_forward_kinematics(start_config))
@@ -120,13 +119,7 @@ class RRTMotionPlanner(object):
         goal_config = self.planning_env.goal
         goal_vertex_id = self.build_tree(goal_config=goal_config)
         plan_list_of_trees = self.plan_to_vertex(goal_vertex_id)
-        end_time = time.time()
         plan = np.vstack([vertex.config for vertex in plan_list_of_trees])
-        # print total path cost and time
-        print('Total cost of path: {:.2f}'.format(self.compute_cost(plan)))
-        print('Total planning time: {:.2f}'.format(end_time - start_time))
-
-        self.visualize_tree()
 
         return plan
 

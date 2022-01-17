@@ -455,7 +455,8 @@ class MapEnvironment(object):
         @param plan Sequence of configs defining the plan.
         '''
         # switch backend
-        matplotlib.use('TkAgg')
+        # Has memory leak!!!
+        # matplotlib.use('TkAgg')
 
         # interpolate plan and get inspected points
         plan = self.interpolate_plan(plan_configs=plan)
@@ -486,6 +487,7 @@ class MapEnvironment(object):
             data = np.fromstring(canvas.tostring_rgb(), dtype=np.uint8, sep='')
             data = data.reshape(canvas.get_width_height()[::-1] + (3,))
             plan_images.append(data)
+            plt.close()
 
         # store gif
         plan_time = datetime.now().strftime("%d-%m-%Y_%H:%M:%S")
@@ -497,7 +499,8 @@ class MapEnvironment(object):
         input lines should be in [x1, y1, x2, y2] convention.
         '''
         # switch backend
-        matplotlib.use('TkAgg')
+        # Has memory leak!!!
+        # matplotlib.use('TkAgg')
 
         plt = self.create_map_visualization()
         plt = self.visualize_obstacles(plt=plt)
@@ -517,15 +520,10 @@ class MapEnvironment(object):
             y = [lines[i, 1], lines[i, 3]]
             plt.plot(x, y, 'k')
 
-
-        graph_title = self.output_plot_desc + '_tree'
-        plt.title(graph_title)
-
+        plt.title(self.output_plot_desc + '_tree')
         plan_time = datetime.now().strftime("%d-%m-%Y_%H:%M:%S")
-
         if self.output_plot_desc:
-            plt.savefig(self.output_plot_desc + f'_{plan_time}.png', bbox_inches='tight')
+            plt.savefig(self.output_plot_desc + f'_tree_{plan_time}.png', bbox_inches='tight')
             plt.close()
-
         else:
             plt.show()

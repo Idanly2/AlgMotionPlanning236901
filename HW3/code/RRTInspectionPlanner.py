@@ -9,7 +9,7 @@ import time
 
 class RRTInspectionPlanner(RRTMotionPlanner):
 
-    def __init__(self, planning_env, ext_mode, goal_prob, coverage):
+    def __init__(self, planning_env, ext_mode, goal_prob, coverage, competition=True):
         super(RRTInspectionPlanner, self).__init__(planning_env, ext_mode, goal_prob)
         # set environment and search tree
         self.planning_env = planning_env
@@ -27,8 +27,16 @@ class RRTInspectionPlanner(RRTMotionPlanner):
         self.extend_success_weight = 0.0
         self.extend_success_weight_max = 200.0  # self.extend_success_weight will not pass this value
         self.extend_rate_to_goal_prob = 0.5
-        self.dynamic_goal_prob = True
-        self.deterministic_goal_choice = True
+
+        self.competition = competition
+        if self.competition:
+            self.dynamic_goal_prob = True
+            self.deterministic_goal_choice = True
+            self.rewire = True
+        else:
+            self.dynamic_goal_prob = False
+            self.deterministic_goal_choice = False
+            self.rewire = False
 
     def sample_biased(self):
         """
@@ -41,7 +49,7 @@ class RRTInspectionPlanner(RRTMotionPlanner):
         else:
             goal_prob = self.goal_prob
 
-        print("goal_prob: ", goal_prob)
+        # print("goal_prob: ", goal_prob)
 
         p = np.random.random()
         if p < goal_prob:
@@ -74,13 +82,13 @@ class RRTInspectionPlanner(RRTMotionPlanner):
                 self.planning_env.compute_intersect_of_points(self.planning_env.get_inspected_points(converged_config),
                                                               inspect_points_left).size == 0:
             converged_config = self.sample_random_config()
-            print("converge view: ", False)
-        else:
-            print("converge view: ", True)
+            # print("converge view: ", False)
+        # else:
+        #     print("converge view: ", True)
 
         return converged_config
 
-    def add_config(self, x_add, ws_pose, parent_id=None, rewire=True):
+    def add_config(self, x_add, ws_pose, parent_id=None):
         inspected_points_at_config = self.planning_env.get_inspected_points(x_add)
         if parent_id is not None:
             inspected_points = self.planning_env.compute_union_of_points(inspected_points_at_config,
@@ -93,7 +101,7 @@ class RRTInspectionPlanner(RRTMotionPlanner):
 
         if parent_id is not None:
             self.tree.add_edge(parent_id, x_add_id)  # Edges indicate the parent of each node
-            if rewire:
+            if self.rewire:
                 edge_cost = self.planning_env.robot.compute_distance(self.tree.vertices[parent_id].config, x_add)
                 # Cost of added node is the cost of its parent, plus the distance from the parent to it.
                 self.tree.add_edge(parent_id, x_add_id, edge_cost)  # Edges indicate the parent of each node
@@ -168,28 +176,21 @@ class RRTInspectionPlanner(RRTMotionPlanner):
             # else:
             #     self.num_discarded += 1
             # print("ratio added: ", self.num_added / (self.num_added + self.num_discarded))
-            print("max_coverage: ", self.tree.max_coverage)
+            # print("max_coverage: ", self.tree.max_coverage)
 
     def plan(self):
         '''
         Compute and return the plan. The function should return a numpy array containing the states in the configuration space.
         '''
-        start_time = time.time()
         # Start with adding the start configuration to the tree.
         start_config = self.planning_env.start
         self.add_config(start_config, self.planning_env.robot.compute_forward_kinematics(start_config))
 
         # TODO: Task 2.3
         max_coverage_id = self.build_coverage_tree()
-        print("tree built")
+        # print("tree built")
         plan_list_of_trees = self.plan_to_vertex(max_coverage_id)
-        end_time = time.time()
 
         plan = np.vstack([vertex.config for vertex in plan_list_of_trees])
-        # print total path cost and time
-        print('Total cost of path: {:.2f}'.format(self.compute_cost(plan)))
-        print('Total planning time: {:.2f}'.format(end_time - start_time))
-
-        self.visualize_tree()
 
         return plan
