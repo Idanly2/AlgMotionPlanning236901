@@ -76,6 +76,9 @@ class RRTTree(object):
             return valid_idxs[0]
         return None
 
+    def is_leaf(self, vid):
+        return vid not in self.edges.values()
+
     def get_nearest_config(self, config):
         '''
         Find the nearest vertex for the given config and returns its state index and configuration

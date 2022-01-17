@@ -34,38 +34,41 @@ class RRTMotionPlanner(object):
         if p < self.goal_prob:
             return self.get_goal_config()
         else:
-            theta_1 = np.random.uniform(0, np.pi / 2)
-            while True:
-                theta_2 = np.random.uniform(-np.pi, np.pi)
-                is_validate_robot = self.planning_env.robot.validate_robot(
-                    np.vstack((self.planning_env.robot.base_position,
-                               self.planning_env.robot.compute_forward_kinematics(
-                                   [theta_1, theta_2]))))
-                if np.cos(theta_1) + np.cos(theta_1 + theta_2) >= 0 and np.sin(theta_1) + np.sin(
-                        theta_1 + theta_2) >= 0 and is_validate_robot:
-                    break
-            while True:
-                theta_3 = np.random.uniform(-np.pi, np.pi)
-                is_validate_robot = self.planning_env.robot.validate_robot(
-                    np.vstack((self.planning_env.robot.base_position,
-                               self.planning_env.robot.compute_forward_kinematics(
-                                   [theta_1, theta_2, theta_3]))))
-                if np.cos(theta_1) + np.cos(theta_1 + theta_2) + np.cos(theta_1 + theta_2 + theta_3) >= 0 and np.sin(
-                        theta_1) + np.sin(
-                    theta_1 + theta_2) + np.sin(theta_1 + theta_2 + theta_3) >= 0 and is_validate_robot:
-                    break
-            while True:
-                theta_4 = np.random.uniform(-np.pi, np.pi)
-                is_validate_robot = self.planning_env.robot.validate_robot(
-                    np.vstack((self.planning_env.robot.base_position,
-                               self.planning_env.robot.compute_forward_kinematics(
-                                   [theta_1, theta_2, theta_3, theta_4]))))
-                if np.cos(theta_1) + np.cos(theta_1 + theta_2) + np.cos(theta_1 + theta_2 + theta_3) \
-                        + np.cos(theta_1 + theta_2 + theta_3 + theta_4) >= 0 and np.sin(theta_1) \
-                        + np.sin(theta_1 + theta_2) + np.sin(theta_1 + theta_2 + theta_3) \
-                        + np.sin(theta_1 + theta_2 + theta_3 + theta_4) >= 0 and is_validate_robot:
-                    break
-            return np.array([theta_1, theta_2, theta_3, theta_4])
+            return self.sample_random_config()
+
+    def sample_random_config(self):
+        theta_1 = np.random.uniform(0, np.pi / 2)
+        while True:
+            theta_2 = np.random.uniform(-np.pi, np.pi)
+            is_validate_robot = self.planning_env.robot.validate_robot(
+                np.vstack((self.planning_env.robot.base_position,
+                           self.planning_env.robot.compute_forward_kinematics(
+                               [theta_1, theta_2]))))
+            if np.cos(theta_1) + np.cos(theta_1 + theta_2) >= 0 and np.sin(theta_1) + np.sin(
+                    theta_1 + theta_2) >= 0 and is_validate_robot:
+                break
+        while True:
+            theta_3 = np.random.uniform(-np.pi, np.pi)
+            is_validate_robot = self.planning_env.robot.validate_robot(
+                np.vstack((self.planning_env.robot.base_position,
+                           self.planning_env.robot.compute_forward_kinematics(
+                               [theta_1, theta_2, theta_3]))))
+            if np.cos(theta_1) + np.cos(theta_1 + theta_2) + np.cos(theta_1 + theta_2 + theta_3) >= 0 and np.sin(
+                    theta_1) + np.sin(
+                theta_1 + theta_2) + np.sin(theta_1 + theta_2 + theta_3) >= 0 and is_validate_robot:
+                break
+        while True:
+            theta_4 = np.random.uniform(-np.pi, np.pi)
+            is_validate_robot = self.planning_env.robot.validate_robot(
+                np.vstack((self.planning_env.robot.base_position,
+                           self.planning_env.robot.compute_forward_kinematics(
+                               [theta_1, theta_2, theta_3, theta_4]))))
+            if np.cos(theta_1) + np.cos(theta_1 + theta_2) + np.cos(theta_1 + theta_2 + theta_3) \
+                    + np.cos(theta_1 + theta_2 + theta_3 + theta_4) >= 0 and np.sin(theta_1) \
+                    + np.sin(theta_1 + theta_2) + np.sin(theta_1 + theta_2 + theta_3) \
+                    + np.sin(theta_1 + theta_2 + theta_3 + theta_4) >= 0 and is_validate_robot:
+                break
+        return np.array([theta_1, theta_2, theta_3, theta_4])
 
     def get_goal_config(self):
         return self.planning_env.goal

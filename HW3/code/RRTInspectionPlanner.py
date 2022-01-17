@@ -2,6 +2,8 @@ import numpy as np
 from RRTTree import RRTTree
 from RRTMotionPlanner import RRTMotionPlanner
 import time
+
+
 # import networkx as nx
 
 
@@ -21,20 +23,59 @@ class RRTInspectionPlanner(RRTMotionPlanner):
         self.num_converge_success = 0
         self.num_converge_fail = 0
 
+        self.extend_success_rate = 0.0
+        self.extend_success_weight = 0.0
+        self.extend_success_weight_max = 200.0  # self.extend_success_weight will not pass this value
+        self.extend_rate_to_goal_prob = 0.5
+        self.dynamic_goal_prob = True
+
+    def sample_biased(self):
+        """
+        Sample a random state, with a certain bias to choose the goal state.
+        :param bias: Bias parameter to draw the goal state instead of a random state.
+        :return: Random state of the map.
+        """
+        if self.dynamic_goal_prob:
+            goal_prob = self.extend_rate_to_goal_prob * self.extend_success_rate
+        else:
+            goal_prob = self.goal_prob
+
+        print("goal_prob: ", goal_prob)
+
+        p = np.random.random()
+        if p < goal_prob:
+            return self.get_goal_config()
+        else:
+            return self.sample_random_config()
+
     def get_goal_config(self):
-        curr_best_ip = self.tree.vertices[self.tree.max_coverage_id].inspected_points
+        curr_best_inspected_points = self.tree.vertices[self.tree.max_coverage_id].inspected_points
         inspect_points_left = self.planning_env.compute_diff_of_points(self.planning_env.inspection_points,
-                                                                       curr_best_ip)
-        random_inspect_id = np.random.randint(len(inspect_points_left))
-        rand_inspect_point = inspect_points_left[random_inspect_id]
-        closest_id, closest_config = self.tree.get_nearest_config_ee_point(rand_inspect_point)
-        converged_config = self.planning_env.robot.converge_to_view(closest_config, rand_inspect_point)
-        # converge_success = rand_inspect_point in self.planning_env.get_inspected_points(converged_config)
-        # if converge_success:
-        #     self.num_converge_success += 1
-        # else:
-        #     self.num_converge_fail += 1
-        # print("converge ratio: ", str(self.num_converge_success / (self.num_converge_success + self.num_converge_fail)))
+                                                                       curr_best_inspected_points)
+        if inspect_points_left.size == 0:
+            return self.sample_random_config()
+
+        # Choose closest inspection point to best configuration
+        ee_position_best = self.planning_env.robot.compute_ee_position(
+            self.tree.vertices[self.tree.max_coverage_id].config)
+        diff = inspect_points_left - ee_position_best
+        closest_ip_to_best = np.argmin(np.einsum('ij,ij->i', diff, diff))
+        chosen_inspect_point = inspect_points_left[closest_ip_to_best]
+
+        # Choose randomly an inspection point
+        # random_inspect_id = np.random.randint(len(inspect_points_left))
+        # chosen_inspect_point = inspect_points_left[random_inspect_id]
+
+        closest_id, closest_config = self.tree.get_nearest_config_ee_point(chosen_inspect_point)
+        converged_config = self.planning_env.robot.converge_to_view(closest_config, chosen_inspect_point)
+        if self.planning_env.get_inspected_points(converged_config).size == 0 or \
+                self.planning_env.compute_intersect_of_points(self.planning_env.get_inspected_points(converged_config),
+                                                              inspect_points_left).size == 0:
+            converged_config = self.sample_random_config()
+            print("converge view: ", False)
+        else:
+            print("converge view: ", True)
+
         return converged_config
 
     def add_config(self, x_add, ws_pose, parent_id=None, rewire=True):
@@ -76,6 +117,11 @@ class RRTInspectionPlanner(RRTMotionPlanner):
             potential_points_union = self.planning_env.compute_union_of_points(x_potential_parent.inspected_points,
                                                                                inspected_points_at_child_config)
             potential_coverage = self.planning_env.compute_coverage(potential_points_union)
+
+            # This condition sometimes finds a path faster, but the path quality is much worse
+            # if self.tree.is_leaf(x_child_id) and (potential_coverage > current_coverage or \
+            #     potential_cost < x_child.cost and potential_coverage == current_coverage):
+            # This makes the search slower, but path quality significantly better
             if potential_cost < x_child.cost and potential_coverage >= current_coverage:
                 self.tree.add_edge(x_potential_parent_id, x_child_id, edge_cost)
                 self.tree.set_inspected_points(x_child_id, potential_points_union)
@@ -94,13 +140,23 @@ class RRTInspectionPlanner(RRTMotionPlanner):
         k = int(2 * np.log(n + 1))
         return min(k, n)
 
+    def check_extend_possible(self, x_new, x_nearest):
+        success = 0
+        if self.planning_env.config_validity_checker(x_new) and \
+                self.planning_env.edge_validity_checker(x_nearest, x_new):
+            success = 1
+
+        self.extend_success_rate = (self.extend_success_weight * self.extend_success_rate + success) / (
+                self.extend_success_weight + 1)
+        self.extend_success_weight = min(self.extend_success_weight + 1, self.extend_success_weight_max)
+        return bool(success)
+
     def build_coverage_tree(self):
         while True:
             x_random = self.sample_biased()
             x_nearest_id, x_nearest = self.tree.get_nearest_config_approx(x_random)
             x_new = self.extend(x_nearest, x_random)
-            if self.planning_env.config_validity_checker(x_new) and \
-                    self.planning_env.edge_validity_checker(x_nearest, x_new):
+            if self.check_extend_possible(x_new, x_nearest):
                 x_new_id = self.add_config(x_new, ws_pose=self.planning_env.robot.compute_forward_kinematics(x_new),
                                            parent_id=x_nearest_id)
                 if self.tree.max_coverage >= self.coverage:
