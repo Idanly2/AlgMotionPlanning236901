@@ -28,6 +28,7 @@ class RRTInspectionPlanner(RRTMotionPlanner):
         self.extend_success_weight_max = 200.0  # self.extend_success_weight will not pass this value
         self.extend_rate_to_goal_prob = 0.5
         self.dynamic_goal_prob = True
+        self.deterministic_goal_choice = True
 
     def sample_biased(self):
         """
@@ -56,15 +57,16 @@ class RRTInspectionPlanner(RRTMotionPlanner):
             return self.sample_random_config()
 
         # Choose closest inspection point to best configuration
-        ee_position_best = self.planning_env.robot.compute_ee_position(
-            self.tree.vertices[self.tree.max_coverage_id].config)
-        diff = inspect_points_left - ee_position_best
-        closest_ip_to_best = np.argmin(np.einsum('ij,ij->i', diff, diff))
-        chosen_inspect_point = inspect_points_left[closest_ip_to_best]
-
+        if self.deterministic_goal_choice:
+            ee_position_best = self.planning_env.robot.compute_ee_position(
+                self.tree.vertices[self.tree.max_coverage_id].config)
+            diff = inspect_points_left - ee_position_best
+            closest_ip_to_best = np.argmin(np.einsum('ij,ij->i', diff, diff))
+            chosen_inspect_point = inspect_points_left[closest_ip_to_best]
         # Choose randomly an inspection point
-        # random_inspect_id = np.random.randint(len(inspect_points_left))
-        # chosen_inspect_point = inspect_points_left[random_inspect_id]
+        else:
+            random_inspect_id = np.random.randint(len(inspect_points_left))
+            chosen_inspect_point = inspect_points_left[random_inspect_id]
 
         closest_id, closest_config = self.tree.get_nearest_config_ee_point(chosen_inspect_point)
         converged_config = self.planning_env.robot.converge_to_view(closest_config, chosen_inspect_point)
@@ -187,5 +189,7 @@ class RRTInspectionPlanner(RRTMotionPlanner):
         # print total path cost and time
         print('Total cost of path: {:.2f}'.format(self.compute_cost(plan)))
         print('Total planning time: {:.2f}'.format(end_time - start_time))
+
+        self.visualize_tree()
 
         return plan

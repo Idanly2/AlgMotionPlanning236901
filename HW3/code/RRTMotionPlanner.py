@@ -126,6 +126,8 @@ class RRTMotionPlanner(object):
         print('Total cost of path: {:.2f}'.format(self.compute_cost(plan)))
         print('Total planning time: {:.2f}'.format(end_time - start_time))
 
+        self.visualize_tree()
+
         return plan
 
     def compute_cost(self, plan):
@@ -159,3 +161,6 @@ class RRTMotionPlanner(object):
                 # Normalize the step vector to the minimal of step_size, or until rand_config is reached
                 dir = scale * dir  # Scaling direction to be of size at most step_size
                 return self.planning_env.robot.wrap_to_pi(near_config + dir)
+
+    def visualize_tree(self):
+        self.tree.visualize_tree()

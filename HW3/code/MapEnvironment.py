@@ -15,7 +15,7 @@ import imageio
 
 class MapEnvironment(object):
 
-    def __init__(self, json_file, task):
+    def __init__(self, json_file, task, output_plot_desc=''):
 
         # check if json file exists and load
         json_path = os.path.join(os.getcwd(), json_file)
@@ -53,6 +53,8 @@ class MapEnvironment(object):
 
         # if you want to - you can display starting map here
         # self.visualize_map(config=self.start)
+
+        self.output_plot_desc = output_plot_desc
 
     def load_obstacles(self, obstacles):
         '''
@@ -488,3 +490,42 @@ class MapEnvironment(object):
         # store gif
         plan_time = datetime.now().strftime("%d-%m-%Y_%H:%M:%S")
         imageio.mimsave(f'plan_{plan_time}.gif', plan_images, 'GIF', duration=0.05)
+
+    def visualize_tree(self, lines):
+        '''
+        Visualize an iterable of lines
+        input lines should be in [x1, y1, x2, y2] convention.
+        '''
+        # switch backend
+        matplotlib.use('TkAgg')
+
+        plt = self.create_map_visualization()
+        plt = self.visualize_obstacles(plt=plt)
+        plt = self.visualize_point_location(plt=plt, config=self.start, color='r')
+
+        # add goal or inspection points
+        if self.task == 'mp':
+            plt = self.visualize_point_location(plt=plt, config=self.goal, color='g')
+        else:  # self.task == 'ip'
+            plt = self.visualize_inspection_points(plt=plt)
+
+        # add robot with current plan step
+        plt = self.visualize_robot(plt=plt, config=self.start)
+
+        for i in range(len(lines)):
+            x = [lines[i, 0], lines[i, 2]]
+            y = [lines[i, 1], lines[i, 3]]
+            plt.plot(x, y, 'k')
+
+
+        graph_title = self.output_plot_desc + '_tree'
+        plt.title(graph_title)
+
+        plan_time = datetime.now().strftime("%d-%m-%Y_%H:%M:%S")
+
+        if self.output_plot_desc:
+            plt.savefig(self.output_plot_desc + f'_{plan_time}.png', bbox_inches='tight')
+            plt.close()
+
+        else:
+            plt.show()

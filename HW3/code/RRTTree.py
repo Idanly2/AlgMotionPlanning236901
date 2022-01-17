@@ -131,6 +131,14 @@ class RRTTree(object):
         minimal_ind = np.argmin(distances)
         return minimal_ind, self.vertices[minimal_ind].config
 
+    def visualize_tree(self):
+        edges_list = []
+        for key in self.edges:
+            edges_list.append(np.hstack([self.vertices[self.edges[key]].ws_pose[-1, :],
+                                         self.vertices[key].ws_pose[-1, :]]))
+        fake_plan = np.array(edges_list)
+        self.planning_env.visualize_tree(fake_plan)
+
 
 class RRTVertex(object):
 
