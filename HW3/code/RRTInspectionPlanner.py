@@ -9,11 +9,10 @@ import time
 
 class RRTInspectionPlanner(RRTMotionPlanner):
 
-    def __init__(self, planning_env, ext_mode, goal_prob, coverage, competition=True):
+    def __init__(self, planning_env, ext_mode, goal_prob, coverage, max_time=3600, competition=True):
         super(RRTInspectionPlanner, self).__init__(planning_env, ext_mode, goal_prob)
         # set environment and search tree
         self.planning_env = planning_env
-        self.tree = RRTTree(self.planning_env, task="ip")
 
         # set search params
         self.ext_mode = ext_mode
@@ -28,6 +27,9 @@ class RRTInspectionPlanner(RRTMotionPlanner):
         self.extend_success_weight_max = 200.0  # self.extend_success_weight will not pass this value
         self.extend_rate_to_goal_prob = 0.5
 
+        self.max_time = max_time
+        self.iter_number = 0
+
         self.competition = competition
         if self.competition:
             self.dynamic_goal_prob = True
@@ -37,6 +39,12 @@ class RRTInspectionPlanner(RRTMotionPlanner):
             self.dynamic_goal_prob = False
             self.deterministic_goal_choice = False
             self.rewire = False
+
+    def init_tree(self):
+        # Start with adding the start configuration to the tree.
+        self.tree = RRTTree(self.planning_env, task="ip")
+        start_config = self.planning_env.start
+        self.add_config(start_config, self.planning_env.robot.compute_forward_kinematics(start_config))
 
     def sample_biased(self):
         """
@@ -162,7 +170,13 @@ class RRTInspectionPlanner(RRTMotionPlanner):
         return bool(success)
 
     def build_coverage_tree(self):
+        start_time = time.time()
         while True:
+            if self.iter_number % 100 == 0 and time.time() - start_time > self.max_time:
+                # Something got stuck in this tree, so throw it away and start all over again
+                print("Reset tree")
+                self.init_tree()
+                start_time = time.time()
             x_random = self.sample_biased()
             x_nearest_id, x_nearest = self.tree.get_nearest_config_approx(x_random)
             x_new = self.extend(x_nearest, x_random)
@@ -171,6 +185,7 @@ class RRTInspectionPlanner(RRTMotionPlanner):
                                            parent_id=x_nearest_id)
                 if self.tree.max_coverage >= self.coverage:
                     return self.tree.max_coverage_id
+            self.iter_number += 1
 
                 # self.num_added += 1
             # else:
@@ -182,9 +197,7 @@ class RRTInspectionPlanner(RRTMotionPlanner):
         '''
         Compute and return the plan. The function should return a numpy array containing the states in the configuration space.
         '''
-        # Start with adding the start configuration to the tree.
-        start_config = self.planning_env.start
-        self.add_config(start_config, self.planning_env.robot.compute_forward_kinematics(start_config))
+        self.init_tree()
 
         # TODO: Task 2.3
         max_coverage_id = self.build_coverage_tree()

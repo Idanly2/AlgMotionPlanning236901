@@ -1,0 +1,1 @@
+ip_map_ip.json_coverage_0.5 Cost: 611.0359962530517 , Time(secs): 11.697254490852355

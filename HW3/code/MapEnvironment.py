@@ -491,7 +491,7 @@ class MapEnvironment(object):
 
         # store gif
         plan_time = datetime.now().strftime("%d-%m-%Y_%H:%M:%S")
-        imageio.mimsave(f'plan_{plan_time}.gif', plan_images, 'GIF', duration=0.05)
+        imageio.mimsave(self.output_plot_desc + f'plan_{plan_time}.gif', plan_images, 'GIF', duration=0.05)
 
     def visualize_tree(self, lines):
         '''

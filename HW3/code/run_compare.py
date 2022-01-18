@@ -74,6 +74,8 @@ if __name__ == "__main__":
     parser.add_argument('-goal_prob', '--goal_prob', type=float, default=0.05, help='probability to draw goal vertex')
     parser.add_argument('-coverage', '--coverage', type=float, default=0.5,
                         help='percentage of points to inspect (inspection planning)')
+    parser.add_argument('-max_time', '--max_time', type=float, default=3600,
+                        help='Maximum time to let planner find solution (in seconds)')
     args = parser.parse_args()
 
     # setup the planner
@@ -96,7 +98,8 @@ if __name__ == "__main__":
             print_success_graphs(costs, times, description_str)
 
     elif args.task == 'ip':
-        coverages = [0.5, 0.75]
+        # coverages = [0.5, 0.75]
+        coverages = [0.75]
         for coverage in coverages:
             # prepare the map
             description_str = args.task + "_" + args.map + "_coverage_" + str(coverage)
@@ -104,7 +107,8 @@ if __name__ == "__main__":
             for i in range(10):
                 planning_env = MapEnvironment(json_file=args.map, task=args.task, output_plot_desc=description_str)
                 planner = RRTInspectionPlanner(planning_env=planning_env, ext_mode=args.ext_mode,
-                                               goal_prob=args.goal_prob, coverage=coverage, competition=False)
+                                               goal_prob=args.goal_prob, coverage=coverage, max_time=args.max_time,
+                                               competition=False)
                 test_planner(alg_compare=alg_compare, planner=planner)
                 del planner, planning_env
 
