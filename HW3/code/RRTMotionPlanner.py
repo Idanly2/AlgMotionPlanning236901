@@ -18,7 +18,7 @@ class RRTMotionPlanner(object):
         self.goal_prob = goal_prob
 
         # Parameters
-        self.step_size = 0.2
+        self.step_size = 0.4
         self.goal_reach_dist_threshold = 2.0
 
         self.num_added = 0
@@ -111,6 +111,8 @@ class RRTMotionPlanner(object):
         '''
         Compute and return the plan. The function should return a numpy array containing the states in the configuration space.
         '''
+        start_time = time.time()
+
         # Start with adding the start configuration to the tree.
         start_config = self.planning_env.start
         self.add_config(start_config, self.planning_env.robot.compute_forward_kinematics(start_config))
@@ -120,6 +122,10 @@ class RRTMotionPlanner(object):
         goal_vertex_id = self.build_tree(goal_config=goal_config)
         plan_list_of_trees = self.plan_to_vertex(goal_vertex_id)
         plan = np.vstack([vertex.config for vertex in plan_list_of_trees])
+
+        end_time = time.time()
+        print('Total cost of path: {:.2f}'.format(self.compute_cost(plan)))
+        print('Total planning time: {:.2f}'.format(end_time - start_time))
 
         return plan
 

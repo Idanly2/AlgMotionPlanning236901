@@ -4,7 +4,7 @@ import numpy as np
 
 class RRTTree(object):
 
-    def __init__(self, planning_env, task="mp"):
+    def __init__(self, planning_env, task="mp", target_inspection_points=None):
 
         self.planning_env = planning_env
         self.task = task
@@ -15,6 +15,7 @@ class RRTTree(object):
         if self.task == "ip":
             self.max_coverage = 0
             self.max_coverage_id = 0
+            self.target_inspection_points = target_inspection_points
 
     def add_vertex(self, config, inspected_points=None):
         '''
@@ -32,7 +33,8 @@ class RRTTree(object):
 
     def set_inspected_points(self, vid, inspected_points):
         self.vertices[vid].inspected_points = inspected_points
-        v_coverage = self.planning_env.compute_coverage(inspected_points=inspected_points)
+        v_coverage = self.planning_env.compute_coverage(inspected_points=inspected_points,
+                                                        target_points=self.target_inspection_points)
         if v_coverage > self.max_coverage:
             self.max_coverage = v_coverage
             self.max_coverage_id = vid

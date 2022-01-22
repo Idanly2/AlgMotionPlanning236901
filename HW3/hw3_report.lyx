@@ -29,9 +29,10 @@
 \bibtex_command default
 \index_command default
 \paperfontsize default
+\spacing single
 \use_hyperref false
-\papersize default
-\use_geometry false
+\papersize a4paper
+\use_geometry true
 \use_package amsmath 1
 \use_package amssymb 1
 \use_package cancel 1
@@ -44,6 +45,7 @@
 \use_package undertilde 1
 \cite_engine basic
 \cite_engine_type default
+\biblio_style plain
 \use_bibtopic false
 \use_indices false
 \paperorientation portrait
@@ -55,6 +57,10 @@
 \shortcut idx
 \color #008000
 \end_index
+\leftmargin 2cm
+\topmargin 2cm
+\rightmargin 2cm
+\bottommargin 2cm
 \secnumdepth 3
 \tocdepth 3
 \paragraph_separation indent
@@ -96,7 +102,7 @@ We will detail our approach for implementing each of the requested functions.
 \end_layout
 
 \begin_layout Itemize
-\begin_inset Formula $\text{compute\_distance}$
+\begin_inset Formula $\mathtt{compute\_distance}$
 \end_inset
 
  - We tested two different functions for computing distances between configurati
@@ -162,7 +168,7 @@ ons.
 
 In both of the cases, the workspace positions of each of the links are determine
 d using the function 
-\begin_inset Formula $\text{compute\_forward\_kinematics}$
+\begin_inset Formula $\mathtt{compute\_forward\_kinematics}$
 \end_inset
 
 , described later.
@@ -170,7 +176,7 @@ d using the function
 \end_layout
 
 \begin_layout Itemize
-\begin_inset Formula $\text{compute\_forward\_kinematics}$
+\begin_inset Formula $\mathtt{compute\_forward\_kinematics}$
 \end_inset
 
  - Assuming the configuration given is 
@@ -212,19 +218,36 @@ In words: each link position is the vector addition of the previous link
 \end_layout
 
 \begin_layout Itemize
-validate_robot - To validate that there are no self intersections of the
- robot, we construct a Shapely LineString object from the links position
- (computed using 
-\begin_inset Formula $\text{compute\_forward\_kinematics}$
+\begin_inset Formula $\mathtt{validate\_robot}$
+\end_inset
+
+ - To validate that there are no self intersections of the robot, we construct
+ a 
+\begin_inset Formula $\mathtt{Shapely}$
+\end_inset
+
+ 
+\begin_inset Formula $\mathtt{LineString}$
+\end_inset
+
+ object from the links position (computed using 
+\begin_inset Formula $\mathtt{compute\_forward\_kinematics}$
 \end_inset
 
 ).
- A LineString object has an attribute 
+ A 
+\begin_inset Formula $\mathtt{LineString}$
+\end_inset
+
+ object has an attribute 
 \begin_inset Formula $\text{is\_simple}$
 \end_inset
 
-, which is True when the LineString does not self intersect, so we simply
- return this value.
+, which is True when the 
+\begin_inset Formula $\mathtt{LineString}$
+\end_inset
+
+ does not self intersect, so we simply return this value.
 \end_layout
 
 \begin_layout Part*
@@ -232,7 +255,1225 @@ validate_robot - To validate that there are no self intersections of the
 \end_layout
 
 \begin_layout Standard
+A few notes regarding the implementation of the following functions.
+\end_layout
 
+\begin_layout Itemize
+\begin_inset Formula $\mathtt{extend}$
+\end_inset
+
+ - In 
+\begin_inset Formula $E1$
+\end_inset
+
+ mode, we simply extend all the way to the sampled configuration.
+ In 
+\begin_inset Formula $E2$
+\end_inset
+
+ however, computing the extended configuration requires special care because
+ the configurations are lists of angles, and angles are circular units.
+ The extension algorithm is the same as when the configuration space is
+ completely euclidean (i.e.
+ simple vectors), with the addition of wrapping the angles to the range
+ 
+\begin_inset Formula $[-\pi,\pi)$
+\end_inset
+
+ each time vector subtraction or addition is computed between configurations.
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Formula $\mathtt{compute\_cost}$
+\end_inset
+
+ - Simply the sum of distances between consecutive configurations in the
+ path, according to the distance function 
+\begin_inset Formula $\mathtt{compute\_distance}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Formula $\mathtt{plan}$
+\end_inset
+
+ - Implemented exactly like regular RRT, with the exception that the termination
+ condition is based on having the end effector close enough to the requested
+ location, and not based on distance of the entire configuration.
+\end_layout
+
+\begin_layout Standard
+Goal biasing was implemented naively - simply sample the goal configuration
+ with probability 
+\begin_inset Formula $p\in(0,1)$
+\end_inset
+
+.
+ We test ran the algorithm with goal biasing of 
+\begin_inset Formula $0.05$
+\end_inset
+
+ and 
+\begin_inset Formula $0.2$
+\end_inset
+
+.
+ We created a static visualization of the tree built, showing on the map
+ the end effector positions only in the tree.
+ The dynamic visualizations (gif) will be attached in the code.
+\end_layout
+
+\begin_layout Subsection*
+Goal Biasing 
+\begin_inset Formula $p=0.05$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Example trees visualized in figures 1, 2, and 3.
+ Plotted in figures 4 and 5 are the graphs of success rate vs.
+ compute time, and path cost vs.
+ compute time.
+ We can see that all of the plan times are in the order of magnitude of
+ tenths of a second, and the path cost does not seem to be correlated to
+ the computation time.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename code/motion_planning_results/mp_bias_0.05/mp_map_mp.json_bias_0.05_tree_17-01-2022_19:43:06.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Example 1 for tree built visualization for motion planning, goal bias 
+\begin_inset Formula $p=0.05$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename code/motion_planning_results/mp_bias_0.05/mp_map_mp.json_bias_0.05_tree_17-01-2022_19:43:17.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Example 2 for tree built visualization for motion planning, goal bias 
+\begin_inset Formula $p=0.05$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename code/motion_planning_results/mp_bias_0.05/mp_map_mp.json_bias_0.05_tree_17-01-2022_19:43:29.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Example 3 for tree built visualization for motion planning, goal bias 
+\begin_inset Formula $p=0.05$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename code/motion_planning_results/mp_bias_0.05/mp_map_mp.json_bias_0.05_success_rate_vs_time.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+RRT motion planner success rate vs.
+ compute time, goal bias 
+\begin_inset Formula $p=0.05$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename code/motion_planning_results/mp_bias_0.05/mp_map_mp.json_bias_0.05_plan_cost_vs_time.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+RRT motion planner path cost vs.
+ compute time, goal bias 
+\begin_inset Formula $p=0.05$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection*
+Goal Biasing 
+\begin_inset Formula $p=0.2$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Example trees visualized in figures 6, 7 and 8.
+ Plotted in figures 9 and 10 are the graphs of success rate vs.
+ compute time, and path cost vs.
+ compute time.
+ We can see here that we had one outlier which took a significantly longer
+ time to compute, and resulted in a longer path as well.
+ In general, the higher goal bias produced worse results, with slightly
+ higher average compute time and slightly longer paths.
+ The results are summarized in the corresponding directories, in text files
+ named in the convention 
+\begin_inset Formula $\mathtt{<configuration>\_<goal\_bias>\_summary.txt}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename code/motion_planning_results/mp_bias_0.2/mp_map_mp.json_bias_0.2_tree_17-01-2022_19:45:43.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Example 1 for tree built visualization for motion planning, goal bias 
+\begin_inset Formula $p=0.2$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename code/motion_planning_results/mp_bias_0.05/mp_map_mp.json_bias_0.05_tree_17-01-2022_19:43:17.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Example 2 for tree built visualization for motion planning, goal bias 
+\begin_inset Formula $p=0.2$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename code/motion_planning_results/mp_bias_0.2/mp_map_mp.json_bias_0.2_tree_17-01-2022_19:46:29.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Example 3 for tree built visualization for motion planning, goal bias 
+\begin_inset Formula $p=0.2$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename code/motion_planning_results/mp_bias_0.2/mp_map_mp.json_bias_0.2_success_rate_vs_time.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+RRT motion planner success rate vs.
+ compute time, goal bias 
+\begin_inset Formula $p=0.2$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename code/motion_planning_results/mp_bias_0.2/mp_map_mp.json_bias_0.2_plan_cost_vs_time.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+RRT motion planner path cost vs.
+ compute time, goal bias 
+\begin_inset Formula $p=0.2$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Part*
+2.4 Inspection Planning
+\end_layout
+
+\begin_layout Standard
+In this section, we implemented an extension of RRT to account for points
+ of interest seen along a path.
+ Each vertex in the tree will hold a configuration 
+\begin_inset Formula $x$
+\end_inset
+
+, and the set of inspection points seen along the path from the root to
+ that vertex 
+\begin_inset Formula $I_{x}$
+\end_inset
+
+.
+ Like before, a random configuration 
+\begin_inset Formula $x_{rand}$
+\end_inset
+
+ is sampled, and the closest configuration to it in the current tree 
+\begin_inset Formula $x_{nearest}$
+\end_inset
+
+ is found.
+ We use the 
+\begin_inset Formula $\mathtt{extend}$
+\end_inset
+
+ method to compute a new state 
+\begin_inset Formula $x_{new}$
+\end_inset
+
+.
+ If the configuration is connected to the tree, we augment 
+\begin_inset Formula $x_{new}$
+\end_inset
+
+ with the inspection points seen at that configuration: 
+\begin_inset Formula $\left(x_{new},I_{x_{nearest}}\cup I_{x_{new}}\right)$
+\end_inset
+
+, and we add an edge in the tree connecting 
+\begin_inset Formula $\left(x_{nearest},I_{x_{nearest}}\right)$
+\end_inset
+
+ with 
+\begin_inset Formula $\left(x_{new},I_{x_{nearest}}\cup I_{x_{new}}\right)$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+For goal biasing, we had to devise a method to generate configurations that
+ view a certain target point.
+ We constructed the following cost function, for given end effector pose
+ and target point:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+J\left(\left(\begin{array}{c}
+x_{ee}\\
+y_{ee}\\
+\theta_{ee}
+\end{array}\right),\left(\begin{array}{c}
+x_{t}\\
+y_{t}
+\end{array}\right)\right)=\left(\frac{1}{r_{max}}\sqrt{\left(x_{t}-x_{ee}\right)^{2}+\left(y_{t}-y_{ee}\right)^{2}}\right)^{2}+\left(\frac{2}{FOV}\left(\left|\underset{[-\pi,\pi)}{wrap}\left(\arctan2\left(y_{t}-y_{ee},x_{t}-x_{ee}\right)-\theta_{ee}\right)\right|\right)\right)^{2}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Having 
+\begin_inset Formula $J<1$
+\end_inset
+
+ implies that the end effector can see the target point.
+ This is because 
+\begin_inset Formula $J<1$
+\end_inset
+
+ implies both of its summands are less than one (because they are strictly
+ positive).
+ Therefore
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\left(\frac{1}{r_{max}}\sqrt{\left(x_{t}-x_{ee}\right)^{2}+\left(y_{t}-y_{ee}\right)^{2}}\right)^{2}<1\iff\sqrt{\left(x_{t}-x_{ee}\right)^{2}+\left(y_{t}-y_{ee}\right)^{2}}<r_{max}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\left(\frac{2}{FOV}\left|\underset{[-\pi,\pi)}{wrap}\left(\arctan2\left(y_{t}-y_{ee},x_{t}-x_{ee}\right)-\theta_{ee}\right)\right|\right)^{2}<1\iff\left|\underset{[-\pi,\pi)}{wrap}\left(\arctan2\left(y_{t}-y_{ee},x_{t}-x_{ee}\right)-\theta_{ee}\right)\right|<\frac{FOV}{2}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In the case 
+\begin_inset Formula $J<1$
+\end_inset
+
+, the distance between the end effector and the target point is less than
+ 
+\begin_inset Formula $r_{max}$
+\end_inset
+
+, and the angle between the end effector's optical axis and the direction
+ to the target is less than 
+\begin_inset Formula $\frac{FOV}{2}$
+\end_inset
+
+, meaning that the end effector views the target point.
+\end_layout
+
+\begin_layout Standard
+We then implemented a gradient descent to minimize this cost function until
+ a value of less than 
+\begin_inset Formula $1$
+\end_inset
+
+ is reached.
+\end_layout
+
+\begin_layout Standard
+To sample a goal configuration, we randomly choose a target inspection point.
+ We then use the current best configuration as a starting configuration,
+ and gradient descent until 
+\begin_inset Formula $J<1$
+\end_inset
+
+, a maximum number of iterations is reached, or the cost function is increasing.
+ From our debugging tests, in about 60% of the time the gradient method
+ succeeds in producing configurations which view the target point.
+ We assume in most part the remaining 40% fails due to obstacles.
+ We observed that only a small part fails due to convergence failure, even
+ though we implemented a naive gradient descent.
+\end_layout
+
+\begin_layout Standard
+We test ran the algorithm with target coverage requirements 
+\begin_inset Formula $c=0.5$
+\end_inset
+
+ and 
+\begin_inset Formula $c=0.75$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection*
+Coverage 
+\begin_inset Formula $c=0.5$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Example trees visualized in figures 11, 12, and 13.
+ Plotted in figures 14 and 15 are the graphs of success rate vs.
+ compute time, and path cost vs.
+ compute time.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename code/inspection_planning_results/ip_coverage_0.5/ip_map_ip.json_coverage_0.5_tree_17-01-2022_20:18:41.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Example 1 for tree built visualization for inspection planning, coverage
+ 
+\begin_inset Formula $c=0.5$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename code/inspection_planning_results/ip_coverage_0.5/ip_map_ip.json_coverage_0.5_tree_17-01-2022_20:19:37.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Example 2 for tree built visualization for inspection planning, coverage
+ 
+\begin_inset Formula $c=0.5$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename code/inspection_planning_results/ip_coverage_0.5/ip_map_ip.json_coverage_0.5_tree_17-01-2022_20:19:51.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Example 3 for tree built visualization for inspection planning, coverage
+ 
+\begin_inset Formula $c=0.5$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename code/inspection_planning_results/ip_coverage_0.5/ip_map_ip.json_coverage_0.5_success_rate_vs_time.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+RRT inspection planner success rate vs.
+ compute time, coverage 
+\begin_inset Formula $c=0.5$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename code/inspection_planning_results/ip_coverage_0.5/ip_map_ip.json_coverage_0.5_plan_cost_vs_time.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+RRT inspection planner path cost vs.
+ compute time, coverage 
+\begin_inset Formula $c=0.5$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection*
+Coverage 
+\begin_inset Formula $c=0.75$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Example trees visualized in figures 16, 17, and 18.
+ Plotted in figures 19 and 20 are the graphs of success rate vs.
+ compute time, and path cost vs.
+ compute time.
+ Note: in the first run we had the runner getting stuck for several hours.
+ We added the condition that if the planning time exceeds one hour, then
+ the tree built is reset and search continues from scratch.
+ This helped escape from bad tree settings, and as evident in the summary
+ graphs, there was one run which took slightly longer than one hour.
+\end_layout
+
+\begin_layout Standard
+Overall, the RRT algorithm is not suitable as-is for inspection planning.
+ Even in this simple example where all inspection points are close to each
+ other, searches get stuck (computation time exceeds 10 mins) quite often.
+ This is because the RRT algorithm is designed for producing linear paths
+ from start to goal, however in inspection planning we often might need
+ producing a path which revisits vertices as it attempts to cover all inspection
+ points.
+ As we saw in class, the voronoi diagram of the RRT is like so the probability
+ of extending the leaves of the tree towards the unexplored regions of the
+ C-space is much higher than extending them towards already explored regions.
+ This means that the probability the existing optimal plan in the tree will
+ be extended back to an already explored region (as required by inspection
+ planning) as impractically low.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename code/inspection_planning_results/ip_coverage_0.75/ip_map_ip.json_coverage_0.75_tree_18-01-2022_00:17:40.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Example 1 for tree built visualization for inspection planning, coverage
+ 
+\begin_inset Formula $c=0.75$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename code/inspection_planning_results/ip_coverage_0.75/ip_map_ip.json_coverage_0.75_tree_18-01-2022_00:18:36.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Example 2 for tree built visualization for inspection planning, coverage
+ 
+\begin_inset Formula $c=0.75$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename code/inspection_planning_results/ip_coverage_0.75/ip_map_ip.json_coverage_0.75_tree_18-01-2022_00:49:32.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Example 3 for tree built visualization for inspection planning, coverage
+ 
+\begin_inset Formula $c=0.75$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename code/inspection_planning_results/ip_coverage_0.75/ip_map_ip.json_coverage_0.75_success_rate_vs_time.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+RRT inspection planner success rate vs.
+ compute time, coverage 
+\begin_inset Formula $c=0.75$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename code/inspection_planning_results/ip_coverage_0.75/ip_map_ip.json_coverage_0.75_plan_cost_vs_time.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+RRT inspection planner path cost vs.
+ compute time, coverage 
+\begin_inset Formula $c=0.75$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Part*
+2.5 Competition
+\end_layout
+
+\begin_layout Standard
+For the competition, we tested several improvements to the RRT inspection
+ planner algorithm described above.
+\end_layout
+
+\begin_layout Standard
+The first was adding a rewire operation, similar to RRT*.
+ Since we observed that the tree building often gets stuck (especially in
+ the high desired coverage setting), we wanted to make connections to the
+ best already available path more probable, to reduce the probability of
+ having two contesting paths which prevent each other from growing into
+ the region occupied by the other.
+ We tested several flavors of the rewire, differing in the condition based
+ on which to connect 
+\begin_inset Formula $x_{potential\_parent}$
+\end_inset
+
+ and 
+\begin_inset Formula $x_{child}$
+\end_inset
+
+.
+ In all of the cases, we chose the number of nearest neighbors to check
+ for rewire to be logarithmic in the size of the tree.
+\end_layout
+
+\begin_layout Enumerate
+Rewire if both the candidate path from 
+\begin_inset Formula $x_{potential\_parent}$
+\end_inset
+
+ to 
+\begin_inset Formula $x_{child}$
+\end_inset
+
+ has length that is strictly shorter, and its coverage is equal or greater.
+ This is the quite conservative, however forgoing one of the conditions
+ does not work.
+ Not checking for path cost improvements results in having cycles in the
+ tree, and not checking for coverage results in no paths found because the
+ rewire hurts the coverage, and ultimately makes the planner fail to find
+ a path.
+ This method results in a longer average computation time but lower rates
+ of the planner getting stuck, and the paths generated are shorter on average.
+\end_layout
+
+\begin_layout Enumerate
+Rewire if (1) holds, or if 
+\begin_inset Formula $x_{child}$
+\end_inset
+
+is a leaf and the candidate path has a strictly greater coverage.
+ This resulted in very long paths (about x2 longer), but shorter computation
+ times.
+ The paths tended to be very jaggy around inspection points, as the planner
+ preferred improving coverage over cost when adding new states.
+\end_layout
+
+\begin_layout Standard
+The second improvement we tested was a dynamic goal bias.
+ We postulated that when the planner is successful in extending new states,
+ it should be more biased in moving towards the goal, and when it fails
+ to extend new states, it should randomly search for new states to help
+ it get out of the local minima it is stuck in.
+ We compute the extension success rate from 
+\begin_inset Formula $x_{nearest}$
+\end_inset
+
+ to 
+\begin_inset Formula $x_{new}$
+\end_inset
+
+ over a sliding window (tested several window sizes between 50 and 1000,
+ currently chosen 200).
+ We then set the goal bias as the computed extension success rate, times
+ a weight constant to ensure that we always have random sampling.
+ We tested weight factors of 0.5, 0.8, and 0.95, and chosen 0.5.
+\end_layout
+
+\begin_layout Standard
+In the goal biasing, we tried several heuristics for choosing a target inspectio
+n point: completely randomly, randomly chosen from the points not seen along
+ the path to the current best configuration in the tree, or deterministically
+ choosing among them the closest one to the best configuration.
+ It seemed like the deterministic choice had the lowest rates of getting
+ stuck, so we went with it.
 \end_layout
 
 \end_body

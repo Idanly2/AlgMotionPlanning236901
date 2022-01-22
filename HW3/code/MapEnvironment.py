@@ -265,16 +265,21 @@ class MapEnvironment(object):
         :param: points2 list of inspected points.
         :return: points1 & points2
         '''
+        if points1.size == 0:
+            return points1
+        if points2.size == 0:
+            return points2
+
         points1_rows = points1.view([('', points1.dtype)] * points1.shape[1])
         points2_rows = points2.view([('', points2.dtype)] * points2.shape[1])
         return np.intersect1d(points1_rows, points2_rows).view(points1.dtype).reshape(-1, points1.shape[1])
 
-    def compute_coverage(self, inspected_points):
+    def compute_coverage(self, inspected_points, target_points):
         '''
         Compute the coverage of the map as the portion of points that were already inspected.
         @param inspected_points list of inspected points.
         '''
-        return len(inspected_points) / len(self.inspection_points)
+        return len(inspected_points) / len(target_points)
 
     # ------------------------#
     # Visualization Functions

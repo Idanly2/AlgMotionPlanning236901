@@ -22,29 +22,38 @@ class RRTInspectionPlanner(RRTMotionPlanner):
         self.num_converge_success = 0
         self.num_converge_fail = 0
 
+        self.success_history_length = 100  # How many samples to keep in self.success_history
+        self.success_history = [0] * self.success_history_length
+        self.extend_rate_to_goal_prob = 1.0
         self.extend_success_rate = 0.0
-        self.extend_success_weight = 0.0
-        self.extend_success_weight_max = 200.0  # self.extend_success_weight will not pass this value
-        self.extend_rate_to_goal_prob = 0.5
 
         self.max_time = max_time
+        self.max_iter = 5000
+
+        self.history_index = 0
         self.iter_number = 0
 
         self.competition = competition
         if self.competition:
             self.dynamic_goal_prob = True
-            self.deterministic_goal_choice = True
-            self.rewire = True
+            self.deterministic_goal_choice = False
+            self.deterministic_goal_choice_start_config = False
+            self.rewire = False
+            self.coverage = 1.0
         else:
             self.dynamic_goal_prob = False
             self.deterministic_goal_choice = False
+            self.deterministic_goal_choice_start_config = False
             self.rewire = False
 
-    def init_tree(self):
+    def init_tree(self, start_config, target_inspection_points):
         # Start with adding the start configuration to the tree.
-        self.tree = RRTTree(self.planning_env, task="ip")
-        start_config = self.planning_env.start
+        self.tree = RRTTree(self.planning_env, task="ip", target_inspection_points=target_inspection_points)
         self.add_config(start_config, self.planning_env.robot.compute_forward_kinematics(start_config))
+
+    def get_inspected_points(self, config):
+        return self.planning_env.compute_intersect_of_points(self.planning_env.get_inspected_points(config),
+                                                             self.tree.target_inspection_points)
 
     def sample_biased(self):
         """
@@ -67,7 +76,7 @@ class RRTInspectionPlanner(RRTMotionPlanner):
 
     def get_goal_config(self):
         curr_best_inspected_points = self.tree.vertices[self.tree.max_coverage_id].inspected_points
-        inspect_points_left = self.planning_env.compute_diff_of_points(self.planning_env.inspection_points,
+        inspect_points_left = self.planning_env.compute_diff_of_points(self.tree.target_inspection_points,
                                                                        curr_best_inspected_points)
         if inspect_points_left.size == 0:
             return self.sample_random_config()
@@ -84,10 +93,15 @@ class RRTInspectionPlanner(RRTMotionPlanner):
             random_inspect_id = np.random.randint(len(inspect_points_left))
             chosen_inspect_point = inspect_points_left[random_inspect_id]
 
-        closest_id, closest_config = self.tree.get_nearest_config_ee_point(chosen_inspect_point)
+        if self.deterministic_goal_choice_start_config:
+            closest_id, closest_config = self.tree.get_nearest_config_ee_point(chosen_inspect_point)
+        else:
+            closest_id = np.random.randint(low=0, high=len(self.tree.vertices))
+            closest_config = self.tree.vertices[closest_id].config
+
         converged_config = self.planning_env.robot.converge_to_view(closest_config, chosen_inspect_point)
-        if self.planning_env.get_inspected_points(converged_config).size == 0 or \
-                self.planning_env.compute_intersect_of_points(self.planning_env.get_inspected_points(converged_config),
+        if self.get_inspected_points(converged_config).size == 0 or \
+                self.planning_env.compute_intersect_of_points(self.get_inspected_points(converged_config),
                                                               inspect_points_left).size == 0:
             converged_config = self.sample_random_config()
             # print("converge view: ", False)
@@ -97,7 +111,7 @@ class RRTInspectionPlanner(RRTMotionPlanner):
         return converged_config
 
     def add_config(self, x_add, ws_pose, parent_id=None):
-        inspected_points_at_config = self.planning_env.get_inspected_points(x_add)
+        inspected_points_at_config = self.get_inspected_points(x_add)
         if parent_id is not None:
             inspected_points = self.planning_env.compute_union_of_points(inspected_points_at_config,
                                                                          self.tree.vertices[parent_id].inspected_points)
@@ -130,11 +144,13 @@ class RRTInspectionPlanner(RRTMotionPlanner):
             edge_cost = self.planning_env.robot.compute_distance(x_potential_parent.config, x_child.config)
             potential_cost = x_potential_parent.cost + edge_cost
             if inspected_points_at_child_config is None:
-                inspected_points_at_child_config = self.planning_env.get_inspected_points(x_child.config)
-            current_coverage = self.planning_env.compute_coverage(x_child.inspected_points)
+                inspected_points_at_child_config = self.get_inspected_points(x_child.config)
+            current_coverage = self.planning_env.compute_coverage(x_child.inspected_points,
+                                                                  self.tree.target_inspection_points)
             potential_points_union = self.planning_env.compute_union_of_points(x_potential_parent.inspected_points,
                                                                                inspected_points_at_child_config)
-            potential_coverage = self.planning_env.compute_coverage(potential_points_union)
+            potential_coverage = self.planning_env.compute_coverage(potential_points_union,
+                                                                    self.tree.target_inspection_points)
 
             # This condition sometimes finds a path faster, but the path quality is much worse
             # if self.tree.is_leaf(x_child_id) and (potential_coverage > current_coverage or \
@@ -164,18 +180,29 @@ class RRTInspectionPlanner(RRTMotionPlanner):
                 self.planning_env.edge_validity_checker(x_nearest, x_new):
             success = 1
 
-        self.extend_success_rate = (self.extend_success_weight * self.extend_success_rate + success) / (
-                self.extend_success_weight + 1)
-        self.extend_success_weight = min(self.extend_success_weight + 1, self.extend_success_weight_max)
+        history_index_wrapped = self.history_index % self.success_history_length
+        self.extend_success_rate = self.extend_success_rate + \
+                                   (success - self.success_history[history_index_wrapped]) / self.success_history_length
+        self.success_history[history_index_wrapped] = success
+
+        self.history_index += 1
+
         return bool(success)
 
-    def build_coverage_tree(self):
+    def build_coverage_tree(self, start_config, target_inspection_points, min_iter=None, max_iter=None):
+        self.init_tree(start_config=start_config, target_inspection_points=target_inspection_points)
         start_time = time.time()
+        build_tree_iter_number = 0
         while True:
-            if self.iter_number % 100 == 0 and time.time() - start_time > self.max_time:
+            if (min_iter is not None and build_tree_iter_number > 0 and build_tree_iter_number % min_iter == 0
+                and self.tree.max_coverage > 0) or (max_iter is not None and self.iter_number >= max_iter):
+                return self.tree.max_coverage_id
+
+            if build_tree_iter_number % 100 == 0 and time.time() - start_time > self.max_time:
                 # Something got stuck in this tree, so throw it away and start all over again
                 print("Reset tree")
-                self.init_tree()
+                self.init_tree(start_config=start_config,
+                               target_inspection_points=target_inspection_points)
                 start_time = time.time()
             x_random = self.sample_biased()
             x_nearest_id, x_nearest = self.tree.get_nearest_config_approx(x_random)
@@ -185,25 +212,51 @@ class RRTInspectionPlanner(RRTMotionPlanner):
                                            parent_id=x_nearest_id)
                 if self.tree.max_coverage >= self.coverage:
                     return self.tree.max_coverage_id
-            self.iter_number += 1
-
                 # self.num_added += 1
             # else:
             #     self.num_discarded += 1
             # print("ratio added: ", self.num_added / (self.num_added + self.num_discarded))
             # print("max_coverage: ", self.tree.max_coverage)
 
+            build_tree_iter_number += 1
+            self.iter_number += 1
+            # print("iter_number: ", self.iter_number)
+
     def plan(self):
         '''
         Compute and return the plan. The function should return a numpy array containing the states in the configuration space.
         '''
-        self.init_tree()
+        start_time = time.time()
 
-        # TODO: Task 2.3
-        max_coverage_id = self.build_coverage_tree()
-        # print("tree built")
-        plan_list_of_trees = self.plan_to_vertex(max_coverage_id)
+        start_config = self.planning_env.start
+        target_inspection_points = self.planning_env.inspection_points
 
-        plan = np.vstack([vertex.config for vertex in plan_list_of_trees])
+        agg_plan = []
+        agg_plan.append(start_config)
 
-        return plan
+        while target_inspection_points.size > 0 and self.iter_number < self.max_iter:
+            max_coverage_id = self.build_coverage_tree(start_config=start_config,
+                                                       target_inspection_points=target_inspection_points,
+                                                       min_iter=200, max_iter=self.max_iter)
+            plan_list_of_trees = self.plan_to_vertex(max_coverage_id)
+
+            start_config = self.tree.vertices[max_coverage_id].config
+            target_inspection_points = self.planning_env.compute_diff_of_points(
+                target_inspection_points, self.tree.vertices[max_coverage_id].inspected_points)
+            plan = [vertex.config for vertex in plan_list_of_trees]
+            agg_plan.extend(plan[1:])
+
+        plan_np = np.vstack(agg_plan)
+        end_time = time.time()
+
+        print('Total cost of path: {:.2f}'.format(self.compute_cost(plan_np)))
+        print('Total planning time: {:.2f}'.format(end_time - start_time))
+
+        final_coverage = self.planning_env.compute_coverage(
+            self.planning_env.compute_diff_of_points(self.planning_env.inspection_points, target_inspection_points),
+            self.planning_env.inspection_points)
+
+        print("final coverage: ", final_coverage)
+        print("final iteration number: ", self.iter_number)
+
+        return plan_np

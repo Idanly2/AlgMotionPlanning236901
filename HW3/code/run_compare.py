@@ -108,7 +108,7 @@ if __name__ == "__main__":
                 planning_env = MapEnvironment(json_file=args.map, task=args.task, output_plot_desc=description_str)
                 planner = RRTInspectionPlanner(planning_env=planning_env, ext_mode=args.ext_mode,
                                                goal_prob=args.goal_prob, coverage=coverage, max_time=args.max_time,
-                                               competition=False)
+                                               competition=True)
                 test_planner(alg_compare=alg_compare, planner=planner)
                 del planner, planning_env
 
