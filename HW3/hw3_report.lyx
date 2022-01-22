@@ -1389,6 +1389,12 @@ RRT inspection planner path cost vs.
 \end_layout
 
 \begin_layout Standard
+
+\series bold
+We wish to participate in the competition.
+\end_layout
+
+\begin_layout Standard
 For the competition, we tested several improvements to the RRT inspection
  planner algorithm described above.
 \end_layout
@@ -1447,6 +1453,14 @@ is a leaf and the candidate path has a strictly greater coverage.
 \end_layout
 
 \begin_layout Standard
+In the end, the rewire operation seemed to improve the path quality, but
+ did not improve significantly enough the chances of the planner to get
+ stuck.
+ It caused a major increase in the computation time, so we decided to remove
+ it.
+\end_layout
+
+\begin_layout Standard
 The second improvement we tested was a dynamic goal bias.
  We postulated that when the planner is successful in extending new states,
  it should be more biased in moving towards the goal, and when it fails
@@ -1461,10 +1475,10 @@ The second improvement we tested was a dynamic goal bias.
 \end_inset
 
  over a sliding window (tested several window sizes between 50 and 1000,
- currently chosen 200).
+ currently chosen 100).
  We then set the goal bias as the computed extension success rate, times
  a weight constant to ensure that we always have random sampling.
- We tested weight factors of 0.5, 0.8, and 0.95, and chosen 0.5.
+ We tested several weight factors and chose 1.
 \end_layout
 
 \begin_layout Standard
@@ -1474,6 +1488,38 @@ n point: completely randomly, randomly chosen from the points not seen along
  choosing among them the closest one to the best configuration.
  It seemed like the deterministic choice had the lowest rates of getting
  stuck, so we went with it.
+\end_layout
+
+\begin_layout Standard
+The last thing that we added for the competition to circumvent the RRT not
+ being able to find paths that revisit the same locations was inner and
+ outer iterations.
+ In inner iterations, we build the RRT in the regular scheme.
+ Every 
+\begin_inset Formula $k$
+\end_inset
+
+ inner iterations, we check to see if we found a path that covers points
+ that haven't been covered.
+ If we haven't, we continue for another 
+\begin_inset Formula $k$
+\end_inset
+
+ iterations.
+ If we have, we return the path found so far.
+ The outer iterations reset the tree, setting the start configuration to
+ be the end configuration of the path returned, and setting the set of required
+ inspection points to cover to exclude those covered in the current path
+ received.
+ The outer iterations continue until all inspection points have been covered,
+ or until a maximum total number of iterations has been reached, to avoid
+ special cases where there are some inspection points cannot be reached.
+\end_layout
+
+\begin_layout Standard
+This method worked suprisingly fast, at the expense of path quality (about
+ x2 increase).
+ However, in about 95% of the cases, the paths returned have 100% coverage.
 \end_layout
 
 \end_body
