@@ -1173,14 +1173,15 @@ Overall, the RRT algorithm is not suitable as-is for inspection planning.
  Even in this simple example where all inspection points are close to each
  other, searches get stuck (computation time exceeds 10 mins) quite often.
  This is because the RRT algorithm is designed for producing linear paths
- from start to goal, however in inspection planning we often need to find
- a path which revisits vertices as it attempts to cover all inspection points.
- As we saw in class, the voronoi bias of the RRT implies that the probability
+ from start to goal, however in inspection planning we often might need
+ producing a path which revisits vertices as it attempts to cover all inspection
+ points.
+ As we saw in class, the voronoi diagram of the RRT is like so the probability
  of extending the leaves of the tree towards the unexplored regions of the
  C-space is much higher than extending them towards already explored regions.
  This means that the probability the existing optimal plan in the tree will
  be extended back to an already explored region (as required by inspection
- planning) is practically non existent.
+ planning) as impractically low.
 \end_layout
 
 \begin_layout Standard
